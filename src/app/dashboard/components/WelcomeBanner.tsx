@@ -1,5 +1,11 @@
 import type { UserContext } from "../types";
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning,";
+  if (hour < 17) return "Good afternoon,";
+  return "Good evening,";
+}
 
 interface WelcomeBannerProps {
   user: UserContext;
@@ -9,57 +15,51 @@ export function WelcomeBanner({ user }: WelcomeBannerProps) {
   return (
     <div
       style={{
-        background: "linear-gradient(135deg, #7A0C0C 0%, #5C0808 100%)",
-        borderRadius: 10,
-        padding: "24px 28px",
-        marginBottom: 24,
-        position: "relative",
-        overflow: "hidden",
+        marginBottom: 28,
+        paddingBottom: 20,
+        borderBottom: "1px solid #F0F2F5",
       }}
     >
-      {/* Subtle decorative circle */}
-      <div
+      {/* Greeting line */}
+      <p
         style={{
-          position: "absolute",
-          top: -30,
-          right: -30,
-          width: 140,
-          height: 140,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.04)",
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: -20,
-          right: 80,
-          width: 80,
-          height: 80,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.03)",
-          pointerEvents: "none",
-        }}
-      />
-
-      <h1
-        style={{
-          fontSize: 20,
-          fontWeight: 700,
-          color: "#F59E0B",
+          fontSize: 13,
+          fontWeight: 400,
+          color: "#9CA3AF",
           margin: 0,
           marginBottom: 4,
-          letterSpacing: "-0.01em",
+          letterSpacing: "0.01em",
         }}
       >
-        Welcome, {user.name}
-      </h1>
-      <p style={{ fontSize: 13, color: "#FCA5A5", margin: 0, marginBottom: 2, fontWeight: 500 }}>
-        {user.title}
+        {getGreeting()}
       </p>
+
+      {/* Name — bold hero text */}
+      <h1
+        style={{
+          fontSize: 24,
+          fontWeight: 700,
+          color: "#1A2332",
+          margin: 0,
+          marginBottom: 5,
+          letterSpacing: "-0.4px",
+          lineHeight: 1.2,
+        }}
+      >
+        {user.name}
+      </h1>
+
+      {/* Faculty · Department */}
       {(user.faculty || user.department) && (
-        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", margin: 0 }}>
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 400,
+            color: "#9CA3AF",
+            margin: 0,
+            letterSpacing: "0.01em",
+          }}
+        >
           {[user.faculty, user.department].filter(Boolean).join(" · ")}
         </p>
       )}

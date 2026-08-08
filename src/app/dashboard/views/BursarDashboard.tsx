@@ -15,6 +15,7 @@ import { useProcurements } from "../ProcurementContext";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { useNotifications } from "../../notifications/NotificationContext";
 
+const INITIAL_UNIVERSITY_AVAILABLE_BALANCE = 850_000;
 
 interface BursarDashboardProps {
   user: UserContext;
@@ -60,7 +61,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
   const pending = myProcurements.filter(p => p.status === "Pending Fund Verification");
   const [selected, setSelected] = useState<Procurement | null>(pending[0] ?? null);
   const [budgetCode, setBudgetCode] = useState("");
-  const [availableFunds, setAvailableFunds] = useState("");
+  const [budgetAllocated, setBudgetAllocated] = useState("");
   const [verified, setVerified] = useState<Set<string>>(new Set());
   const [rejected, setRejected] = useState<Set<string>>(new Set());
   const [feedback, setFeedback] = useState<{ message: string; tone: "success" | "warning" } | null>(null);
@@ -69,16 +70,18 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 
   const handleVerify = async () => {
     if (!selected) return;
+    const allocatedAmount = Number(budgetAllocated);
+    const remainingBalance = INITIAL_UNIVERSITY_AVAILABLE_BALANCE - allocatedAmount;
     await updateProcurement(selected.id, {
       status: "Funds Verified",
       budgetCode,
-      availableFunds: Number(availableFunds),
-      notes: `Funds verified. Available allocation: ${formatLKR(Number(availableFunds))}.`,
+      availableFunds: remainingBalance,
+      notes: `Funds verified. Allocated to this procurement: ${formatLKR(allocatedAmount)}. University balance before allocation: ${formatLKR(INITIAL_UNIVERSITY_AVAILABLE_BALANCE)}. Remaining balance: ${formatLKR(remainingBalance)}.`,
     }, { name: user.name, role: user.role });
     setVerified(p => new Set([...p, selected.id]));
     setSelected(null);
     setBudgetCode("");
-    setAvailableFunds("");
+    setBudgetAllocated("");
     setFeedback({ message: `Funds verified successfully for ${selected.id}.`, tone: "success" });
   };
 
@@ -194,8 +197,8 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
             {/* Budget Comparison */}
             <BudgetComparison
               requested={selected.value}
-              allocated={availableFunds ? Number(availableFunds) : selected.value}
-              available={availableFunds ? Math.max(0, Number(availableFunds) - selected.value) : selected.value}
+              allocated={budgetAllocated ? Number(budgetAllocated) : 0}
+              totalAvailable={INITIAL_UNIVERSITY_AVAILABLE_BALANCE}
             />
 
             {/* Verification Form */}
@@ -206,11 +209,10 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                 <input value={budgetCode} onChange={e => setBudgetCode(e.target.value)} placeholder="e.g. BUDGET-2026-FAS" style={inputStyle} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Total Budget Allocated (LKR) <span style={{ color: "#EF4444" }}>*</span></label>
-                <input type="number" value={availableFunds} onChange={e => setAvailableFunds(e.target.value)} placeholder="e.g. 500000" style={inputStyle} />
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Budget Allocated (LKR) <span style={{ color: "#EF4444" }}>*</span></label>
+                <input type="number" min="0" value={budgetAllocated} onChange={e => setBudgetAllocated(e.target.value)} placeholder="e.g. 80000" style={inputStyle} />
               </div>
-
-              {availableFunds && Number(availableFunds) < selected.value && (
+              {budgetAllocated && Number(budgetAllocated) < selected.value && (
                 <div style={{
                   padding: 12,
                   background: "#FEF2F2",
@@ -224,7 +226,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#DC2626" }}>Budget Shortfall</div>
                     <div style={{ fontSize: 11, color: "#DC2626", marginTop: 2 }}>
-                      Allocated budget is less than the requested amount. Consider escalating to Main Bursar.
+                      The allocated amount is less than the requested amount. Consider escalating to Main Bursar.
                     </div>
                   </div>
                 </div>
@@ -249,17 +251,17 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                 </button>
                 <button
                   onClick={handleVerify}
-                  disabled={!budgetCode || !availableFunds}
+                  disabled={!budgetCode || !budgetAllocated}
                   style={{
                     flex: 2,
                     padding: "10px",
-                    background: !budgetCode || !availableFunds ? "#D1D5DB" : "#15803D",
+                    background: !budgetCode || !budgetAllocated ? "#D1D5DB" : "#15803D",
                     color: "#FFFFFF",
                     border: "none",
                     borderRadius: 9,
                     fontSize: 13,
                     fontWeight: 700,
-                    cursor: !budgetCode || !availableFunds ? "not-allowed" : "pointer",
+                    cursor: !budgetCode || !budgetAllocated ? "not-allowed" : "pointer",
                   }}
                 >
                   Verify Funds

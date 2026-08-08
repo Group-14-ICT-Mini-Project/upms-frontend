@@ -6,9 +6,10 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonResponsibilitiesCard } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface TBDashboardProps {
@@ -58,34 +59,21 @@ function TBOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k:
 }
 
 function ApprovalsPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
-  const items = myProcurements.filter(p => p.status === "Technical Evaluation");
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
+  const items = myProcurements.filter(p => p.status === "Authority Approval");
   const [decisions, setDecisions] = useState<Record<string, "approved" | "rejected">>({});
 
-  const decide = (id: string, verdict: "approved" | "rejected") => {
-    const pr = MOCK_PROCUREMENTS.find(p => p.id === id);
-    if (pr) {
-      if (verdict === "approved") {
-        pr.status = "Purchase Order Issued";
-        pr.poNumber = `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      } else {
-        pr.status = "Rejected";
-      }
-      pr.updatedAt = new Date().toISOString();
-      pr.activityLogs = [
-        {
-          id: `log-tb-${Date.now()}`,
-          stepIndex: 5,
-          actor: user.name,
-          role: "Tender Board",
-          action: verdict === "approved"
-            ? `Tender Board approved the BES recommendation. Purchase Order ${pr.poNumber} generated and issued to supplier.`
-            : `Tender Board rejected the BES recommendation. Procurement canceled.`,
-          timestamp: new Date().toISOString(),
-        },
-        ...(pr.activityLogs ?? []),
-      ];
-    }
+  const decide = async (id: string, verdict: "approved" | "rejected") => {
+    const poNumber = `PO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    await updateProcurement(id, verdict === "approved" ? {
+      status: "Purchase Order Issued",
+      poNumber,
+      notes: `Tender Board approved the BES recommendation. Purchase Order ${poNumber} generated and issued to supplier.`,
+    } : {
+      status: "Rejected",
+      notes: "Tender Board rejected the BES recommendation. Procurement canceled.",
+    }, { name: user.name, role: user.role });
     setDecisions(p => ({ ...p, [id]: verdict }));
   };
 
@@ -166,7 +154,8 @@ function ApprovalsPanel({ onViewProcurementDetails, user }: { onViewProcurementD
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

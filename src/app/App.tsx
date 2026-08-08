@@ -8,6 +8,8 @@ import type { Role } from "./dashboard/types";
 import { ROLE_META } from "./dashboard/types";
 import { useState } from "react";
 import usjLogo from "../usj-logo.png";
+import { useAuth } from "./auth/AuthContext";
+import type { UserContext } from "./dashboard/types";
 
 export default function App() {
   return (
@@ -37,10 +39,14 @@ function WelcomeRoute() {
 
 function LoginRoute() {
   const nav = useNavigate();
+  const auth = useAuth();
   return (
     <LoginScreen
       onBack={() => nav("/")}
-      onLoginSuccess={() => nav("/select-role")}
+      onLogin={async (email, password) => {
+        const user = await auth.login(email, password);
+        nav(`/dashboard/${user.role.toLowerCase()}`);
+      }}
       onGoRegister={() => nav("/register")}
     />
   );
@@ -48,10 +54,14 @@ function LoginRoute() {
 
 function RegisterRoute() {
   const nav = useNavigate();
+  const auth = useAuth();
   return (
     <RegisterScreen
       onBack={() => nav("/")}
-      onRegisterSuccess={() => nav("/waiting")}
+      onRegister={async (payload) => {
+        await auth.register(payload);
+        nav("/waiting");
+      }}
       onGoLogin={() => nav("/login")}
     />
   );
@@ -69,9 +79,11 @@ function WaitingRoute() {
 
 function RolePickerRoute() {
   const nav = useNavigate();
-  return (
-    <RolePicker onSelect={(role) => nav(`/dashboard/${role.toLowerCase()}`)} />
-  );
+  const auth = useAuth();
+  return <RolePicker onSelect={(role) => {
+    auth.setDemoUser(DEMO_USERS[role]);
+    nav(`/dashboard/${role.toLowerCase()}`);
+  }} />;
 }
 
 function DashboardRoute() {
@@ -92,6 +104,18 @@ function DashboardRoute() {
 
 
 const ROLES: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
+
+export const DEMO_USERS: Record<Role, UserContext> = {
+  HOD:  { role: "HOD",  name: "Dr. Nimal Perera",          title: "Head of Department",      faculty: "Faculty of Applied Sciences", department: "Computer Science",  avatarInitials: "NP" },
+  BUR:  { role: "BUR",  name: "Mr. Kamal Silva",            title: "Bursar (Main)",           faculty: undefined,                     department: undefined,           avatarInitials: "KS" },
+  FBUR: { role: "FBUR", name: "Mrs. Indrani Perera",        title: "Faculty Bursar",          faculty: "Faculty of Applied Sciences", department: undefined,           avatarInitials: "IP" },
+  SDC:  { role: "SDC",  name: "Ms. Dilhani Jayasena",       title: "Supplies Division Clerk", faculty: undefined,                     department: "Supplies Division", avatarInitials: "DJ" },
+  TEC:  { role: "TEC",  name: "Dr. Ruwan Fernando",         title: "TEC Member",              faculty: "Faculty of Engineering",      department: undefined,           avatarInitials: "RF" },
+  TB:   { role: "TB",   name: "Prof. Anura Wickramasinghe", title: "Tender Board Member",     faculty: undefined,                     department: undefined,           avatarInitials: "AW" },
+  STK:  { role: "STK",  name: "Mr. Saman Rathnayake",       title: "Storekeeper",             faculty: undefined,                     department: "Central Stores",    avatarInitials: "SR" },
+  SUP:  { role: "SUP",  name: "Lanka Lab Supplies Co.",     title: "Supplier / Bidder",       faculty: undefined,                     department: undefined,           avatarInitials: "LL" },
+  FIN:  { role: "FIN",  name: "Ms. Priyanka Perera",        title: "Finance Division",        faculty: undefined,                     department: "Finance Dept",      avatarInitials: "PP" },
+};
 
 function RolePicker({ onSelect }: { onSelect: (r: Role) => void }) {
   const [hovered, setHovered] = useState<Role | null>(null);

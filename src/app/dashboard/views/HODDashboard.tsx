@@ -4,14 +4,15 @@ import { SignaturePad, SignaturePadRef } from "@/components/SignaturePad";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { InventoryCard } from "../components/InventoryCard";
-import type { UserContext } from "../types";
+import type { Procurement, UserContext } from "../types";
 import { PageTitleBar } from "../components/ContentHeader";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonTable } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface HODDashboardProps {
@@ -462,11 +463,15 @@ interface ReqForm {
 }
 
 function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: () => void; onViewProcurement: (id: string) => void; user?: { name?: string; title?: string; department?: string; faculty?: string } }) {
+  const { createRequisition } = useProcurements();
   const hodName = user?.name ?? "Dr. Nimal Perera";
   const signaturePadRef = useRef<SignaturePadRef>(null);
 
   const [step, setStep]       = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [createdId, setCreatedId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [errors, setErrors]   = useState<Partial<Record<keyof ReqForm, string>>>({});
   const [form, setForm]       = useState<ReqForm>({
     title:            "",
@@ -519,27 +524,49 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
   const next = () => { if (validate(step)) setStep(s => Math.min(s + 1, STEPS.length - 1)); };
   const back = () => { setErrors({}); setStep(s => Math.max(s - 1, 0)); };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let signatureDataUrl = form.signature;
     if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
       signatureDataUrl = signaturePadRef.current.toDataURL("image/png");
     }
 
-    if (validate(3)) {
-      const submittedProcurementData = {
-        ...form,
+    if (!validate(3)) return;
+
+    const submittedProcurementData = {
+      ...form,
+      signature: signatureDataUrl,
+    };
+    setForm(submittedProcurementData);
+    console.log("Procurement Request Submitted Data:", submittedProcurementData);
+
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      const created = await createRequisition({
+        title: form.title,
+        faculty: form.faculty,
+        department: form.department,
+        description: form.description,
+        reason: form.reason,
+        quantity: Number(form.quantity),
+        unit: form.unit,
+        value: Number(form.approxValue),
+        submittedBy: form.preparedBy,
         signature: signatureDataUrl,
-      };
-      setForm(submittedProcurementData);
-      console.log("Procurement Request Submitted Data:", submittedProcurementData);
+      });
+      setCreatedId(created.id);
       setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Unable to submit requisition");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (submitted) {
     // In a real system we'd get the new PR ID from the server response.
     // For the demo we use the most recently created mock record as a stand-in.
-    const newPrId = "PR-2026-001";
+    const newPrId = createdId || "PR-2026-001";
     return (
       <div style={{
         display: "flex",
@@ -908,21 +935,25 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
             <button
               type="button"
               onClick={handleSubmit}
+              disabled={isSubmitting}
               style={{
                 padding: "10px 28px",
-                background: "#7A0C0C",
+                background: isSubmitting ? "#D1D5DB" : "#7A0C0C",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: 10,
                 fontSize: 13,
                 fontWeight: 700,
-                cursor: "pointer",
+                cursor: isSubmitting ? "not-allowed" : "pointer",
               }}
             >
-              Submit Requisition
+              {isSubmitting ? "Submitting..." : "Submit Requisition"}
             </button>
           )}
         </div>
+        {submitError && (
+          <p style={{ margin: "12px 0 0", fontSize: 12, color: "#DC2626", fontWeight: 600 }}>{submitError}</p>
+        )}
       </div>
     </div>
   );
@@ -982,7 +1013,8 @@ const mInput = (hasError: boolean): React.CSSProperties => ({
 });
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 28px" }}>
       <PageTitleBar title="All Procurements" subtitle={`${list.length} records visible for your role`} />
@@ -994,24 +1026,16 @@ function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: 
 }
 
 function QualityReportPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const list = getProcurementsForUser(user);
   const needsReport = list.filter(p => p.status === "Quality Report Required");
   const [submittedReports, setSubmittedReports] = useState<Set<string>>(new Set());
 
-  const handleSubmitReport = (pr: any) => {
-    pr.status = "Payment Pending";
-    pr.updatedAt = new Date().toISOString();
-    pr.activityLogs = [
-      {
-        id: `log-hod-qr-${Date.now()}`,
-        stepIndex: 8,
-        actor: user.name,
-        role: "Head of Department",
-        action: `Quality inspection completed. Goods meet requested specifications. Quality Report approved and forwarded to Finance.`,
-        timestamp: new Date().toISOString(),
-      },
-      ...(pr.activityLogs ?? []),
-    ];
+  const handleSubmitReport = async (pr: Procurement) => {
+    await updateProcurement(pr.id, {
+      status: "Payment Pending",
+      notes: "Quality inspection completed. Goods meet requested specifications. Quality Report approved and forwarded to Finance.",
+    }, { name: user.name, role: user.role });
     setSubmittedReports(p => new Set([...p, pr.id]));
   };
 

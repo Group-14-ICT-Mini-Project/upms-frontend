@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { UserContext } from "../types";
-import { getActionQueueForRole, getProcurementsForRole } from "../data";
 import type { Procurement } from "../types";
+import { useProcurements } from "../ProcurementContext";
 
 interface DashboardData {
   queue: Procurement[];
@@ -21,6 +21,7 @@ export function useDashboardData(user: UserContext): {
   isLoading: boolean;
   data: DashboardData | null;
 } {
+  const { getProcurementsForUser, procurements } = useProcurements();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
 
@@ -33,16 +34,33 @@ export function useDashboardData(user: UserContext): {
     const delay = 1000 + Math.random() * 400;
 
     const timer = setTimeout(() => {
+      const visibleProcurements = getProcurementsForUser(user);
       setData({
-        queue: getActionQueueForRole(user),
-        procurements: getProcurementsForRole(user),
+        queue: getActionQueueForUser(user, visibleProcurements),
+        procurements: visibleProcurements,
       });
       setIsLoading(false);
     }, delay);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.role]);
+  }, [user.role, user.faculty, user.department, procurements]);
 
   return { isLoading, data };
+}
+
+function getActionQueueForUser(user: UserContext, procurements: Procurement[]) {
+  const statusesByRole: Record<UserContext["role"], Procurement["status"][]> = {
+    HOD: ["Quality Report Required"],
+    BUR: ["Pending Fund Verification"],
+    FBUR: ["Pending Fund Verification"],
+    SDC: ["Funds Verified"],
+    TEC: ["Technical Evaluation"],
+    TB: ["Authority Approval"],
+    STK: ["Awaiting Delivery"],
+    SUP: ["Bidding Open"],
+    FIN: ["Payment Pending"],
+  };
+
+  return procurements.filter(item => statusesByRole[user.role].includes(item.status));
 }

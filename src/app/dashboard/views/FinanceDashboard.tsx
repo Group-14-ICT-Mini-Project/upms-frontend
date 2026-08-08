@@ -4,9 +4,10 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonBudgetBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface FinanceDashboardProps {
@@ -205,29 +206,18 @@ function FinanceOverview({ user, onTabChange }: { user: UserContext; onTabChange
 }
 
 function PaymentsPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
   const pending = myProcurements.filter(p => p.status === "Payment Pending");
   const [processed, setProcessed] = useState<Set<string>>(new Set());
   const [voucherNos, setVoucherNos] = useState<Record<string, string>>({});
 
-  const handleProcess = (id: string) => {
+  const handleProcess = async (id: string) => {
     if (!voucherNos[id]) return;
-    const pr = MOCK_PROCUREMENTS.find(p => p.id === id);
-    if (pr) {
-      pr.status = "Completed";
-      pr.updatedAt = new Date().toISOString();
-      pr.activityLogs = [
-        {
-          id: `log-fin-${Date.now()}`,
-          stepIndex: 9,
-          actor: user.name,
-          role: "Finance Division",
-          action: `Payment processed and dispatched. Voucher: ${voucherNos[id]} issued. Requisition completed.`,
-          timestamp: new Date().toISOString(),
-        },
-        ...(pr.activityLogs ?? []),
-      ];
-    }
+    await updateProcurement(id, {
+      status: "Completed",
+      notes: `Payment processed and dispatched. Voucher: ${voucherNos[id]} issued. Requisition completed.`,
+    }, { name: user.name, role: user.role });
     setProcessed(p => new Set([...p, id]));
   };
 
@@ -317,7 +307,8 @@ function PaymentsPanel({ onViewProcurementDetails, user }: { onViewProcurementDe
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

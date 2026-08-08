@@ -191,3 +191,9 @@
     line-height: 1.5;
   }
 }
+
+/* ── Dashboard fade-in animation (used by loading state transitions) ─────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

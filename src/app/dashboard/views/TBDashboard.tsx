@@ -7,6 +7,8 @@ import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonResponsibilitiesCard } from "../components/SkeletonLoader";
 
 
 interface TBDashboardProps {
@@ -24,10 +26,22 @@ export function TBDashboard({ user, activeTab, onTabChange, onViewProcurement, o
 }
 
 function TBOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { isLoading, data } = useDashboardData(user);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 32px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        <SkeletonActionQueue />
+        <SkeletonResponsibilitiesCard />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
   return (
-    <div style={{ padding: "28px 32px" }}>
+    <div style={{ padding: "28px 32px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow total={myProcurements.length} inQueue={queue.length} actionRequired={queue.length} completed={2} />
       <ActionQueueList items={queue} onViewAll={() => onTabChange("approvals")} onItemClick={() => onTabChange("approvals")} />

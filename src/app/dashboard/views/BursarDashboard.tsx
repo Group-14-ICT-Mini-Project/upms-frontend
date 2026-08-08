@@ -8,6 +8,8 @@ import { StatusBadge } from "../components/StatusBadge";
 import { BudgetComparison } from "../components/BudgetComparison";
 import { PageTitleBar } from "../components/ContentHeader";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
 
 
 interface BursarDashboardProps {
@@ -25,10 +27,21 @@ export function BursarDashboard({ user, activeTab, onTabChange, onViewProcuremen
 }
 
 function BursarOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { isLoading, data } = useDashboardData(user);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        <SkeletonActionQueue />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
   return (
-    <div style={{ padding: "28px 28px" }}>
+    <div style={{ padding: "28px 28px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow total={myProcurements.length} inQueue={queue.length} actionRequired={queue.length} completed={0} />
       <ActionQueueList items={queue} onViewAll={() => onTabChange("fund-verification")} onItemClick={() => onTabChange("fund-verification")} />

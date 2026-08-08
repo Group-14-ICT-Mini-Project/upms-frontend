@@ -6,6 +6,8 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonMiniStatTiles } from "../components/SkeletonLoader";
 
 
 interface SDCDashboardProps {
@@ -25,12 +27,24 @@ export function SDCDashboard({ user, activeTab, onTabChange, onViewProcurement, 
 }
 
 function SDCOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { isLoading, data } = useDashboardData(user);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 32px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        <SkeletonActionQueue />
+        <SkeletonMiniStatTiles count={3} />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
   const biddingOpen = myProcurements.filter(p => p.status === "Bidding Open");
 
   return (
-    <div style={{ padding: "28px 32px" }}>
+    <div style={{ padding: "28px 32px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow
         total={myProcurements.length}

@@ -9,6 +9,8 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonTable } from "../components/SkeletonLoader";
 
 
 interface HODDashboardProps {
@@ -30,12 +32,28 @@ export function HODDashboard({ user, activeTab, onTabChange, onViewProcurement, 
 
 
 function HODOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { isLoading, data } = useDashboardData(user);
   const [search, setSearch] = useState("");
 
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 32px 40px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        {/* Button placeholder */}
+        <div
+          className="upms-skel"
+          style={{ width: 200, height: 40, borderRadius: 9, marginBottom: 24 }}
+        />
+        <SkeletonTable rows={6} />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
+
   return (
-    <div style={{ padding: "28px 32px 40px" }}>
+    <div style={{ padding: "28px 32px 40px", animation: "fadeIn 0.4s ease" }}>
       {/* Welcome Banner */}
       <WelcomeBanner user={user} />
 

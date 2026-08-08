@@ -97,7 +97,7 @@ function DashboardRoute() {
   return (
     <DashboardLayout
       role={roleSlug}
-      onLogout={() => nav("/select-role")}
+      onLogout={() => nav("/login")}
     />
   );
 }

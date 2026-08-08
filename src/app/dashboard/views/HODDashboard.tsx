@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft } from "lucide-react";
+import { SignaturePad, SignaturePadRef } from "@/components/SignaturePad";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { InventoryCard } from "../components/InventoryCard";
@@ -462,6 +463,7 @@ interface ReqForm {
 
 function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: () => void; onViewProcurement: (id: string) => void; user?: { name?: string; title?: string; department?: string; faculty?: string } }) {
   const hodName = user?.name ?? "Dr. Nimal Perera";
+  const signaturePadRef = useRef<SignaturePadRef>(null);
 
   const [step, setStep]       = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -503,7 +505,12 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
         e.approxValue = "Enter a valid approximate value.";
     }
     if (s === 3) {
-      if (!form.signature.trim()) e.signature = "Signature is required to submit.";
+      const isSignatureEmpty = signaturePadRef.current
+        ? signaturePadRef.current.isEmpty()
+        : !form.signature.trim();
+      if (isSignatureEmpty) {
+        e.signature = "Please provide your signature before submitting the procurement request.";
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -513,7 +520,20 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
   const back = () => { setErrors({}); setStep(s => Math.max(s - 1, 0)); };
 
   const handleSubmit = () => {
-    if (validate(3)) setSubmitted(true);
+    let signatureDataUrl = form.signature;
+    if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+      signatureDataUrl = signaturePadRef.current.toDataURL("image/png");
+    }
+
+    if (validate(3)) {
+      const submittedProcurementData = {
+        ...form,
+        signature: signatureDataUrl,
+      };
+      setForm(submittedProcurementData);
+      console.log("Procurement Request Submitted Data:", submittedProcurementData);
+      setSubmitted(true);
+    }
   };
 
   if (submitted) {
@@ -539,6 +559,23 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
           <p style={{ fontSize: 15, fontWeight: 600, color: "#374151", margin: "0 0 16px" }}>
             {form.title}
           </p>
+
+          {form.signature && (
+            <div style={{
+              marginBottom: 16,
+              padding: "10px 16px",
+              background: "#F9FAFB",
+              border: "1px solid #E5E7EB",
+              borderRadius: 10,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Digitally Signed PNG Attached</span>
+              <img src={form.signature} alt="Digital Signature" style={{ maxHeight: 50, maxWidth: "100%", objectFit: "contain" }} />
+            </div>
+          )}
 
           {/* Workflow next-step hint */}
           <div style={{
@@ -790,42 +827,25 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
               />
             </MField>
 
-            {/* Signature */}
-            <MField label="Signature (type your full name to sign)" error={errors.signature} required>
-              <div style={{ position: "relative" }}>
-                <input
-                  value={form.signature}
-                  onChange={set("signature")}
-                  placeholder="Type your full name as signature…"
-                  style={{
-                    ...mInput(!!errors.signature),
-                    fontFamily: "Georgia, 'Times New Roman', serif",
-                    fontStyle: "italic",
-                    fontSize: 16,
-                    letterSpacing: "0.04em",
-                    paddingLeft: 48,
-                    color: "#1E3A5F",
-                  }}
-                />
-                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 18 }}>✍️</span>
-              </div>
-              {form.signature && (
-                <div style={{
-                  marginTop: 8,
-                  padding: "10px 14px",
-                  background: "#FAFAFA",
-                  border: "1px dashed #D1D5DB",
-                  borderRadius: 8,
-                  fontFamily: "Georgia, serif",
-                  fontStyle: "italic",
-                  fontSize: 17,
-                  color: "#1E3A5F",
-                  letterSpacing: "0.05em",
-                }}>
-                  {form.signature}
-                </div>
-              )}
-            </MField>
+            {/* Digital Signature Pad */}
+            <div style={{ marginBottom: 20 }}>
+              <SignaturePad
+                ref={signaturePadRef}
+                label="Authorized Signature"
+                error={errors.signature}
+                required
+                value={form.signature}
+                onChange={(sigUrl) => {
+                  setForm(p => ({ ...p, signature: sigUrl || "" }));
+                  if (sigUrl && errors.signature) {
+                    setErrors(p => ({ ...p, signature: undefined }));
+                  }
+                }}
+                onClear={() => {
+                  setForm(p => ({ ...p, signature: "" }));
+                }}
+              />
+            </div>
 
             {/* Declaration */}
             <div style={{

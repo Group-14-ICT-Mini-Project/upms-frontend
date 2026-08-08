@@ -10,6 +10,13 @@ export class ApiError extends Error {
   }
 }
 
+function getDefaultErrorMessage(status: number) {
+  if (status === 401) return "";
+  if (status === 403) return "You do not have permission to perform this action.";
+  if (status === 404) return "Requested resource was not found.";
+  return `Request failed with status ${status}`;
+}
+
 // ── Access token ──────────────────────────────────────────────
 export function getAuthToken() {
   return window.localStorage.getItem("upms_auth_token");
@@ -80,10 +87,15 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   });
 
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
+    const defaultMessage = getDefaultErrorMessage(response.status);
+    let message = defaultMessage;
     try {
       const body = await response.json();
-      message = body.message ?? body.error ?? message;
+      if (response.status === 401) {
+        message = defaultMessage;
+      } else {
+        message = body.message ?? body.error ?? defaultMessage;
+      }
     } catch {
       // Keep the default message when the backend returns no JSON body.
     }

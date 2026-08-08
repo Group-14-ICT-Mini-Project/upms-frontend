@@ -2,28 +2,27 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import usjLogo from "../../usj-logo.png";
 import { BackButton } from "./ui/BackButton";
-import { Mail, Lock, Eye, EyeOff, Check, Loader2, CheckCircle2 } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Check, Loader2, CheckCircle2 } from "lucide-react";
 
 interface LoginScreenProps {
   onBack: () => void;
-  onLogin: (email: string, password: string) => Promise<void>;
+  onLogin: (username: string, password: string) => Promise<void>;
   onGoRegister: () => void;
 }
 
 export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const [submitError, setSubmitError] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
   const validate = () => {
-    const errs: { email?: string; password?: string } = {};
-    if (!email) errs.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = "Enter a valid email";
+    const errs: { username?: string; password?: string } = {};
+    if (!username.trim()) errs.username = "Username is required";
     if (!password) errs.password = "Password is required";
     return errs;
   };
@@ -35,7 +34,7 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
     setIsLoading(true);
     setSubmitError("");
     try {
-      await onLogin(email, password);
+      await onLogin(username, password);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Unable to sign in");
     } finally {
@@ -72,32 +71,32 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
             Sign In
           </h1>
           <p className="text-gray-500 text-sm">
-            Enter your institutional credentials to continue
+            Enter your credentials to continue
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
+          {/* Username */}
           <div>
             <label className="block mb-1.5 text-gray-900 text-[0.8rem] font-medium">
-              Institutional Email
+              Username
             </label>
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                <Mail size={15} strokeWidth={1.5} />
+                <User size={15} strokeWidth={1.5} />
               </div>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }}
-                placeholder="name@sjp.ac.lk"
+                type="text"
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setErrors((p) => ({ ...p, username: undefined })); }}
+                placeholder="Enter your username"
                 className={`w-full pl-10 pr-4 py-3 rounded-xl bg-white border outline-none text-sm transition-all ${
-                  errors.email ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-gold"
+                  errors.username ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-gold"
                 }`}
               />
             </div>
-            {errors.email && (
-              <p className="mt-1 text-red-500 text-xs">{errors.email}</p>
+            {errors.username && (
+              <p className="mt-1 text-red-500 text-xs">{errors.username}</p>
             )}
           </div>
 
@@ -110,7 +109,7 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
               <button
                 type="button"
                 onClick={() => {
-                  if (!email) { setErrors((p) => ({ ...p, email: "Enter your email first" })); return; }
+                  if (!username) { setErrors((p) => ({ ...p, username: "Enter your username first" })); return; }
                   setForgotSent(true);
                   setTimeout(() => setForgotSent(false), 4000);
                 }}
@@ -227,7 +226,7 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
             className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-600 text-[0.8rem]"
           >
             <CheckCircle2 size={14} strokeWidth={2} />
-            <span>Password reset link sent to <strong>{email}</strong></span>
+            <span>Password reset link sent for <strong>{username}</strong></span>
           </motion.div>
         )}
       </motion.div>

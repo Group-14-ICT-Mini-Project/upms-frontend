@@ -49,6 +49,20 @@ export function WelcomeBanner({ user }: WelcomeBannerProps) {
         {user.name}
       </h1>
 
+      {/* Role title */}
+      <p
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#64748B",
+          margin: 0,
+          marginBottom: 3,
+          letterSpacing: "0.01em",
+        }}
+      >
+        {user.title}
+      </p>
+
       {/* Faculty · Department */}
       {(user.faculty || user.department) && (
         <p

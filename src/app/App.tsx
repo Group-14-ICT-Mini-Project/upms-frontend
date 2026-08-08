@@ -43,8 +43,8 @@ function LoginRoute() {
   return (
     <LoginScreen
       onBack={() => nav("/")}
-      onLogin={async (email, password) => {
-        const user = await auth.login(email, password);
+      onLogin={async (username, password) => {
+        const user = await auth.login(username, password);
         nav(`/dashboard/${user.role.toLowerCase()}`);
       }}
       onGoRegister={() => nav("/register")}
@@ -97,7 +97,7 @@ function DashboardRoute() {
   return (
     <DashboardLayout
       role={roleSlug}
-      onLogout={() => nav("/select-role")}
+      onLogout={() => nav("/login")}
     />
   );
 }

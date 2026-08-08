@@ -1,12 +1,13 @@
-import type { UserContext } from "../dashboard/types";
 import { apiRequest } from "./client";
 
+// ── Request shapes ────────────────────────────────────────────
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface RegisterRequest {
+  username: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -14,25 +15,30 @@ export interface RegisterRequest {
   role: string;
 }
 
+// ── Response shape (matches actual backend) ───────────────────
 export interface AuthResponse {
-  token: string;
-  user: UserContext;
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  userId: number;
+  username: string;
+  email: string;
+  roles: string[];
+  lastLogin: string | null;
 }
 
+// ── API calls ─────────────────────────────────────────────────
 export function login(payload: LoginRequest) {
-  return apiRequest<AuthResponse>("/auth/login", {
+  return apiRequest<AuthResponse>("/v1/auth/login", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export function register(payload: RegisterRequest) {
-  return apiRequest<void>("/auth/register", {
+  return apiRequest<AuthResponse>("/v1/auth/signup", {
     method: "POST",
     body: JSON.stringify(payload),
   });
-}
-
-export function getCurrentUser() {
-  return apiRequest<UserContext>("/auth/me");
 }

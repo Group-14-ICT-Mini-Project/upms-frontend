@@ -475,8 +475,8 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
   const [errors, setErrors]   = useState<Partial<Record<keyof ReqForm, string>>>({});
   const [form, setForm]       = useState<ReqForm>({
     title:            "",
-    faculty:          user?.faculty ?? "",
-    department:       user?.department ?? "",
+    faculty:          user?.faculty || "Faculty of Applied Sciences",
+    department:       user?.department || "Computer Science",
     requisitionType:  "Consumables",
     stockBalance:     "",
     fundingSource:    "Operating Budget",
@@ -685,7 +685,7 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
 
         {/* ── Step panels ── */}
         {step === 0 && (
-          <StepCard title="Basic Information" subtitle="Enter requisition details and verify current stock">
+          <StepCard title="Basic Information" subtitle="Enter the requisition title, faculty and department are auto-filled">
             <MField label="Requisition Title" error={errors.title} required>
               <input
                 value={form.title}
@@ -695,50 +695,21 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
               />
             </MField>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <MField label="Faculty" error={errors.faculty} required>
-                <select value={form.faculty} onChange={set("faculty")} style={mInput(!!errors.faculty)}>
-                  <option value="">Select faculty…</option>
-                  {["Faculty of Applied Sciences","Faculty of Management Studies","Faculty of Engineering","Faculty of Humanities","Faculty of Medical Sciences"].map(f => (
-                    <option key={f}>{f}</option>
-                  ))}
-                </select>
+              <MField label="Faculty">
+                <input
+                  value={form.faculty}
+                  readOnly
+                  style={{ ...mInput(false), background: "#F9FAFB", color: "#6B7280", cursor: "default" }}
+                />
               </MField>
               <MField label="Department">
                 <input
                   value={form.department}
-                  onChange={set("department")}
-                  placeholder="e.g. Computer Science"
-                  style={mInput(false)}
+                  readOnly
+                  style={{ ...mInput(false), background: "#F9FAFB", color: "#6B7280", cursor: "default" }}
                 />
               </MField>
             </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <MField label="Requisition Type" required>
-                <select value={form.requisitionType} onChange={set("requisitionType")} style={mInput(false)}>
-                  <option value="Consumables">Consumables (recurring supply)</option>
-                  <option value="Capital Goods">Capital Goods (equipment/asset)</option>
-                </select>
-              </MField>
-              <MField label="Current Stock Balance (Units)">
-                <input
-                  type="number"
-                  value={form.stockBalance}
-                  onChange={set("stockBalance")}
-                  placeholder="Enter current quantity available"
-                  style={mInput(false)}
-                />
-              </MField>
-            </div>
-
-            <MField label="Funding Source">
-              <select value={form.fundingSource} onChange={set("fundingSource")} style={mInput(false)}>
-                <option value="Operating Budget">Operating Budget</option>
-                <option value="Capital Grant">Capital Grant</option>
-                <option value="Research Fund">Research Fund</option>
-                <option value="Maintenance Budget">Maintenance Budget</option>
-              </select>
-            </MField>
           </StepCard>
         )}
 

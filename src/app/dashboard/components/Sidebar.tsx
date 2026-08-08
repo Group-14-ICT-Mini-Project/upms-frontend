@@ -7,6 +7,7 @@ import {
 import { useState } from "react";
 import usjLogo from "../../../usj-logo.png";
 import type { Role, UserContext } from "../types";
+import { useProcurements } from "../ProcurementContext";
 
 
 type IconComponent = typeof LayoutDashboard;
@@ -36,7 +37,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
     {
       title: "ACTIONS",
       items: [
-        { key: "quality-report", label: "Quality Reports", icon: FileCheck2, badge: 1 },
+        { key: "quality-report", label: "Quality Reports", icon: FileCheck2 },
       ],
     },
   ],
@@ -45,7 +46,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",         label: "Dashboard",           icon: LayoutDashboard },
-        { key: "fund-verification", label: "Fund Verification",   icon: BadgeCheck, badge: 1 },
+        { key: "fund-verification", label: "Fund Verification",   icon: BadgeCheck },
         { key: "procurements",      label: "All Procurements",    icon: ClipboardList },
       ],
     },
@@ -55,7 +56,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",         label: "Dashboard",           icon: LayoutDashboard },
-        { key: "fund-verification", label: "Fund Verification",   icon: BadgeCheck, badge: 1 },
+        { key: "fund-verification", label: "Fund Verification",   icon: BadgeCheck },
         { key: "procurements",      label: "All Procurements",    icon: ClipboardList },
       ],
     },
@@ -77,7 +78,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
-        { key: "evaluations",  label: "Evaluations",       icon: ClipboardCheck, badge: 1 },
+        { key: "evaluations",  label: "Evaluations",       icon: ClipboardCheck },
         { key: "procurements", label: "All Procurements",  icon: ClipboardList },
       ],
     },
@@ -87,7 +88,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
-        { key: "approvals",    label: "Approvals",         icon: ShieldCheck, badge: 1 },
+        { key: "approvals",    label: "Approvals",         icon: ShieldCheck },
         { key: "procurements", label: "All Procurements",  icon: ClipboardList },
       ],
     },
@@ -97,7 +98,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
-        { key: "grn",          label: "GRN",               icon: PackageCheck, badge: 1 },
+        { key: "grn",          label: "GRN",               icon: PackageCheck },
         { key: "procurements", label: "All Procurements",  icon: ClipboardList },
       ],
     },
@@ -117,7 +118,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
-        { key: "payments",     label: "Payments",          icon: CreditCard, badge: 1 },
+        { key: "payments",     label: "Payments",          icon: CreditCard },
         { key: "procurements", label: "All Procurements",  icon: ClipboardList },
       ],
     },
@@ -140,6 +141,22 @@ interface SidebarProps {
 export function Sidebar({ user, activeKey, onNavigate, onSignOut }: SidebarProps) {
   const sections = ROLE_NAV[user.role] ?? [];
   const [search, setSearch] = useState("");
+  const { getProcurementsForUser } = useProcurements();
+  const visibleProcurements = getProcurementsForUser(user);
+  const actionStatuses: Record<string, string> = {
+    "quality-report": "Quality Report Required",
+    "fund-verification": "Pending Fund Verification",
+    "evaluations": "Technical Evaluation",
+    "approvals": "Authority Approval",
+    "grn": "Awaiting Delivery",
+    "payments": "Payment Pending",
+  };
+  const actionCounts = Object.fromEntries(
+    Object.entries(actionStatuses).map(([key, status]) => [
+      key,
+      visibleProcurements.filter(procurement => procurement.status === status).length,
+    ]),
+  ) as Record<string, number>;
 
   return (
     <aside
@@ -264,6 +281,7 @@ export function Sidebar({ user, activeKey, onNavigate, onSignOut }: SidebarProps
             {filteredItems.map(item => {
               const Icon = item.icon;
               const isActive = activeKey === item.key;
+              const badgeCount = actionCounts[item.key] ?? item.badge ?? 0;
               return (
                 <button
                   key={item.key}
@@ -300,7 +318,7 @@ export function Sidebar({ user, activeKey, onNavigate, onSignOut }: SidebarProps
                 >
                   <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
                   <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge !== undefined && (
+                  {badgeCount > 0 && (
                     <span
                       style={{
                         fontSize: 10,
@@ -313,7 +331,7 @@ export function Sidebar({ user, activeKey, onNavigate, onSignOut }: SidebarProps
                         textAlign: "center",
                       }}
                     >
-                      {item.badge}
+                      {badgeCount}
                     </span>
                   )}
                 </button>

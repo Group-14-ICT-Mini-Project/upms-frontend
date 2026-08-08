@@ -6,9 +6,10 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
+import { PageTitleBar } from "../components/ContentHeader";
 import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonResponsibilitiesCard } from "../components/SkeletonLoader";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonResponsibilitiesCard, SkeletonTable } from "../components/SkeletonLoader";
 import { useProcurements } from "../ProcurementContext";
 
 
@@ -154,8 +155,16 @@ function ApprovalsPanel({ onViewProcurementDetails, user }: { onViewProcurementD
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const { getProcurementsForUser } = useProcurements();
+  const { getProcurementsForUser, isLoading } = useProcurements();
   const list = getProcurementsForUser(user);
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px" }}>
+        <PageTitleBar title="All Procurements" subtitle="Loading procurement records" />
+        <SkeletonTable rows={6} />
+      </div>
+    );
+  }
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

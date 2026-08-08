@@ -301,9 +301,10 @@ export function filterProcurementsForRole(procurements: Procurement[], user: Use
   const { role, faculty, department } = user;
 
   if (role === "HOD") {
+    if (!faculty && !department) return procurements;
     // HOD only sees procurements submitted from their department & faculty
     return procurements.filter(p =>
-      p.faculty === faculty && p.department === department
+      (!faculty || p.faculty === faculty) && (!department || p.department === department)
     );
   }
 
@@ -324,31 +325,6 @@ export function filterProcurementsForRole(procurements: Procurement[], user: Use
 
   // Others (FIN, SDC, TEC, TB, STK) see all
   return procurements;
-}
-
-/** Filter mock procurements visible to a given role/user */
-export function getProcurementsForRole(user: UserContext): Procurement[] {
-  return filterProcurementsForRole(MOCK_PROCUREMENTS, user);
-}
-
-/** Get procurements that require action for a given role/user */
-export function getActionQueueForRole(user: UserContext): Procurement[] {
-  const { role } = user;
-  const filtered = getProcurementsForRole(user);
-
-  const map: Record<string, ProcurementStatus[]> = {
-    HOD: ["Quality Report Required"],
-    BUR: ["Pending Fund Verification"],
-    FBUR: ["Pending Fund Verification"],
-    SDC: ["Funds Verified"],
-    TEC: ["Technical Evaluation"],
-    TB:  ["Technical Evaluation"],
-    STK: ["Awaiting Delivery"],
-    SUP: ["Bidding Open"],
-    FIN: ["Payment Pending"],
-  };
-  const statuses = map[role] ?? [];
-  return filtered.filter(p => statuses.includes(p.status));
 }
 
 /**

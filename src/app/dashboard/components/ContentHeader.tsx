@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Bell, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, FileText, PackageCheck } from "lucide-react";
 import type { UserContext } from "../types";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../../components/ui/hover-card";
+import { useNotifications } from "../../notifications/NotificationContext";
 
 interface ContentHeaderProps {
   user: UserContext;
@@ -33,12 +34,26 @@ const buttonStyle = {
 };
 
 export function ContentHeader({ user, pageTitle, onNavigate }: ContentHeaderProps) {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [defaultNotifications, setDefaultNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const { notifications: recipientNotifications, markAsRead, clearNotificationsFor } = useNotifications();
+  const receivedNotifications = recipientNotifications
+    .filter(notification => notification.recipient === user.name)
+    .map(notification => ({ ...notification, icon: FileText, color: "#DC2626" }));
+  const notifications = [...receivedNotifications, ...defaultNotifications];
   const unreadCount = notifications.filter(notification => !notification.isRead).length;
 
   const handleNotificationClick = (id: string, destination: string) => {
-    setNotifications(current => current.map(notification => notification.id === id ? { ...notification, isRead: true } : notification));
+    if (recipientNotifications.some(notification => notification.id === id)) {
+      markAsRead(id);
+    } else {
+      setDefaultNotifications(current => current.map(notification => notification.id === id ? { ...notification, isRead: true } : notification));
+    }
     onNavigate(id === "approval-review" ? ACTION_DESTINATION_BY_ROLE[user.role] : destination);
+  };
+
+  const handleClearNotifications = () => {
+    setDefaultNotifications([]);
+    clearNotificationsFor(user.name);
   };
 
   return (
@@ -65,7 +80,7 @@ export function ContentHeader({ user, pageTitle, onNavigate }: ContentHeaderProp
                 <strong style={{ fontSize: 13, color: "#111827" }}>Notifications</strong>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {unreadCount > 0 && <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 700 }}>{unreadCount} new</span>}
-                  {notifications.length > 0 && <button onClick={() => setNotifications([])} style={{ padding: 0, border: 0, background: "transparent", color: "#6B7280", fontSize: 11, fontWeight: 650, cursor: "pointer" }}>Clear all</button>}
+                  {notifications.length > 0 && <button onClick={handleClearNotifications} style={{ padding: 0, border: 0, background: "transparent", color: "#6B7280", fontSize: 11, fontWeight: 650, cursor: "pointer" }}>Clear all</button>}
                 </div>
               </div>
               {notifications.length === 0 ? (

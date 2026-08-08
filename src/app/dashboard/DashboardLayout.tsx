@@ -133,21 +133,6 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
 
   const pageInfo = PAGE_TITLES[activeKey] ?? { title: activeKey, subtitle: "" };
 
-  const handleUpdateProfile = (changes: Pick<UserContext, "name" | "faculty" | "department">) => {
-    // Demo-role sessions do not have an authenticated user yet, so persist the
-    // displayed fallback user directly.
-    if (!auth.user) {
-      const name = changes.name.trim();
-      auth.setDemoUser({
-        ...user,
-        ...changes,
-        avatarInitials: name.slice(0, 2).toUpperCase() || user.avatarInitials,
-      });
-      return;
-    }
-    auth.updateProfile(changes);
-  };
-
   return (
     <div
       style={{
@@ -176,7 +161,6 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
           user={user}
           pageTitle={pageInfo.title}
           pageSubtitle={pageInfo.subtitle}
-          onUpdateProfile={handleUpdateProfile}
         />
 
         {/* Scrollable content area */}

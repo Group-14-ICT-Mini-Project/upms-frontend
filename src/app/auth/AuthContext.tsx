@@ -54,7 +54,6 @@ interface AuthContextValue {
   register: (payload: authApi.RegisterRequest) => Promise<void>;
   logout: () => void;
   setDemoUser: (user: UserContext) => void;
-  updateProfile: (changes: Pick<UserContext, "name" | "faculty" | "department">) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -91,18 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setDemoUser(nextUser) {
       setStoredUser(nextUser);
       setUser(nextUser);
-    },
-    updateProfile(changes) {
-      setUser(currentUser => {
-        if (!currentUser) return currentUser;
-        const nextUser = {
-          ...currentUser,
-          ...changes,
-          avatarInitials: changes.name.trim().slice(0, 2).toUpperCase() || currentUser.avatarInitials,
-        };
-        setStoredUser(nextUser);
-        return nextUser;
-      });
     },
   }), [user, isLoading]);
 

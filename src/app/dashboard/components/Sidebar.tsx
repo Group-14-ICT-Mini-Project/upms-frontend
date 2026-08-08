@@ -2,7 +2,7 @@ import {
   LayoutDashboard, FilePlus2, ClipboardList, FileCheck2,
   BadgeCheck, Sliders, Building2, Scale, ClipboardCheck,
   ShieldCheck, PackageCheck, FileText, Send, CreditCard,
-  Settings, LogOut, Search, X,
+  LogOut, Search, X,
 } from "lucide-react";
 import { useState } from "react";
 import usjLogo from "../../../usj-logo.png";
@@ -126,7 +126,6 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
 };
 
 const GENERAL_ITEMS: NavItem[] = [
-  { key: "_settings", label: "Settings",  icon: Settings },
   { key: "_logout",   label: "Log out",   icon: LogOut },
 ];
 

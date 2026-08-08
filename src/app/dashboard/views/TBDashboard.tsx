@@ -6,9 +6,10 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonResponsibilitiesCard } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface TBDashboardProps {

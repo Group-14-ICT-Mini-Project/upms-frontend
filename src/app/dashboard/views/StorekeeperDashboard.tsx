@@ -4,9 +4,10 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface StorekeeperDashboardProps {

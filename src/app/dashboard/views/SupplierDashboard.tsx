@@ -4,9 +4,10 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
-import { MOCK_PROCUREMENTS, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonTenderList } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface SupplierDashboardProps {

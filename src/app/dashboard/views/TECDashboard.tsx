@@ -6,9 +6,10 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { ScoringMatrix, type ScoringCriteria } from "../components/ScoringMatrix";
 import { EmptyState } from "../components/EmptyState";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonResponsibilitiesCard } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface TECDashboardProps {
@@ -61,7 +62,7 @@ function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcuremen
   const { getProcurementsForUser, updateProcurement } = useProcurements();
   const myProcurements = getProcurementsForUser(user);
   const items = myProcurements.filter(p => p.status === "Technical Evaluation");
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<Procurement | null>(items[0] ?? null);
   const [scores, setScores] = useState<{ technical: string; financial: string; compliance: string }>({ technical: "", financial: "", compliance: "" });
 
   // Scoring criteria for the matrix
@@ -71,21 +72,12 @@ function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcuremen
     { id: "financial", name: "Financial Viability", weight: 40, maxScore: 100 },
   ];
 
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
     if (!selected) return;
-    selected.status = "Authority Approval";
-    selected.updatedAt = new Date().toISOString();
-    selected.activityLogs = [
-      {
-        id: `log-tec-${Date.now()}`,
-        stepIndex: 4,
-        actor: user.name,
-        role: "TEC Member",
-        action: `Technical Evaluation completed. Compliance: ${scores.compliance}, Technical: ${scores.technical}, Financial: ${scores.financial}. Bid Evaluation Sheet (BES) submitted to Tender Board.`,
-        timestamp: new Date().toISOString(),
-      },
-      ...(selected.activityLogs ?? []),
-    ];
+    await updateProcurement(selected.id, {
+      status: "Authority Approval",
+      notes: `Technical Evaluation completed. Compliance: ${scores.compliance}, Technical: ${scores.technical}, Financial: ${scores.financial}. Bid Evaluation Sheet (BES) submitted to Tender Board.`,
+    }, { name: user.name, role: user.role });
     setSelected(null);
     setScores({ technical: "", financial: "", compliance: "" });
   };

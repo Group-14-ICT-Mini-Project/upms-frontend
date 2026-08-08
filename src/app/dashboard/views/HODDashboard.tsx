@@ -3,14 +3,15 @@ import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Buildin
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { InventoryCard } from "../components/InventoryCard";
-import type { UserContext } from "../types";
+import type { Procurement, UserContext } from "../types";
 import { PageTitleBar } from "../components/ContentHeader";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonTable } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface HODDashboardProps {

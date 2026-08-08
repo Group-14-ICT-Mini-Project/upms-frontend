@@ -7,9 +7,10 @@ import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
 import { BudgetComparison } from "../components/BudgetComparison";
 import { PageTitleBar } from "../components/ContentHeader";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface BursarDashboardProps {

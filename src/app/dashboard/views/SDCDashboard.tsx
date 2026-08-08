@@ -5,9 +5,9 @@ import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonMiniStatTiles } from "../components/SkeletonLoader";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface SDCDashboardProps {

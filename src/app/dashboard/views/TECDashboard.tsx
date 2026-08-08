@@ -1,11 +1,12 @@
 import { useState } from "react";
-import type { UserContext } from "../types";
+import type { Procurement, UserContext } from "../types";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface TECDashboardProps {
@@ -23,8 +24,9 @@ export function TECDashboard({ user, activeTab, onTabChange, onViewProcurement, 
 }
 
 function TECOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
+  const queue = myProcurements.filter(p => p.status === "Technical Evaluation");
   return (
     <div style={{ padding: "28px 32px" }}>
       <WelcomeBanner user={user} />
@@ -43,23 +45,18 @@ function TECOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k
 }
 
 function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
   const items = myProcurements.filter(p => p.status === "Technical Evaluation");
-  const handleSubmitReport = () => {
+  const [selected, setSelected] = useState<Procurement | null>(items[0] ?? null);
+  const [scores, setScores] = useState({ technical: "", financial: "", compliance: "" });
+
+  const handleSubmitReport = async () => {
     if (!selected) return;
-    selected.status = "Authority Approval";
-    selected.updatedAt = new Date().toISOString();
-    selected.activityLogs = [
-      {
-        id: `log-tec-${Date.now()}`,
-        stepIndex: 4,
-        actor: user.name,
-        role: "TEC Member",
-        action: `Technical Evaluation completed. Scores - Technical: ${scores.technical}, Financial: ${scores.financial}, Compliance: ${scores.compliance}. Bid Evaluation Sheet (BES) submitted.`,
-        timestamp: new Date().toISOString(),
-      },
-      ...(selected.activityLogs ?? []),
-    ];
+    await updateProcurement(selected.id, {
+      status: "Authority Approval",
+      notes: `Technical Evaluation completed. Scores - Technical: ${scores.technical}, Financial: ${scores.financial}, Compliance: ${scores.compliance}. Bid Evaluation Sheet (BES) submitted.`,
+    }, { name: user.name, role: user.role });
     setSelected(null);
     setScores({ technical: "", financial: "", compliance: "" });
   };
@@ -156,7 +153,8 @@ function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcuremen
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

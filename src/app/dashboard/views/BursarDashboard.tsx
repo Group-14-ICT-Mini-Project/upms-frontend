@@ -6,7 +6,8 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
 import { PageTitleBar } from "../components/ContentHeader";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface BursarDashboardProps {
@@ -24,8 +25,9 @@ export function BursarDashboard({ user, activeTab, onTabChange, onViewProcuremen
 }
 
 function BursarOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
+  const queue = myProcurements.filter(p => p.status === "Pending Fund Verification");
   return (
     <div style={{ padding: "28px 28px" }}>
       <WelcomeBanner user={user} />
@@ -36,7 +38,8 @@ function BursarOverview({ user, onTabChange }: { user: UserContext; onTabChange:
 }
 
 function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
   const pending = myProcurements.filter(p => p.status === "Pending Fund Verification");
   const [selected, setSelected] = useState<Procurement | null>(pending[0] ?? null);
   const [budgetCode, setBudgetCode] = useState("");
@@ -44,43 +47,26 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
   const [verified, setVerified] = useState<Set<string>>(new Set());
   const [rejected, setRejected] = useState<Set<string>>(new Set());
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!selected) return;
-    selected.status = "Funds Verified";
-    selected.budgetCode = budgetCode;
-    selected.updatedAt = new Date().toISOString();
-    selected.activityLogs = [
-      {
-        id: `log-bur-${Date.now()}`,
-        stepIndex: 1,
-        actor: user.name,
-        role: user.role === "FBUR" ? "Faculty Bursar" : "Bursar",
-        action: `Funds verified. Budget code: ${budgetCode}. Available allocation: ${formatLKR(Number(availableFunds))}.`,
-        timestamp: new Date().toISOString(),
-      },
-      ...(selected.activityLogs ?? []),
-    ];
+    await updateProcurement(selected.id, {
+      status: "Funds Verified",
+      budgetCode,
+      availableFunds: Number(availableFunds),
+      notes: `Funds verified. Available allocation: ${formatLKR(Number(availableFunds))}.`,
+    }, { name: user.name, role: user.role });
     setVerified(p => new Set([...p, selected.id]));
     setSelected(null);
     setBudgetCode("");
     setAvailableFunds("");
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selected) return;
-    selected.status = "Rejected";
-    selected.updatedAt = new Date().toISOString();
-    selected.activityLogs = [
-      {
-        id: `log-bur-${Date.now()}`,
-        stepIndex: -1,
-        actor: user.name,
-        role: user.role === "FBUR" ? "Faculty Bursar" : "Bursar",
-        action: "Fund verification rejected due to insufficient budget allocation.",
-        timestamp: new Date().toISOString(),
-      },
-      ...(selected.activityLogs ?? []),
-    ];
+    await updateProcurement(selected.id, {
+      status: "Rejected",
+      notes: "Fund verification rejected due to insufficient budget allocation.",
+    }, { name: user.name, role: user.role });
     setRejected(p => new Set([...p, selected.id]));
     setSelected(null);
   };
@@ -171,7 +157,8 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 28px" }}>
       <PageTitleBar title="All Procurements" subtitle={`${list.length} records visible for your role`} />

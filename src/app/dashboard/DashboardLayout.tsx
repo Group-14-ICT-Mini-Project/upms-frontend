@@ -13,7 +13,8 @@ import { SupplierDashboard } from "./views/SupplierDashboard";
 import { FinanceDashboard } from "./views/FinanceDashboard";
 import { ProcurementStatusTracker } from "./components/ProcurementStatusTracker";
 import { ProcurementDetails } from "./components/ProcurementDetails";
-import { MOCK_PROCUREMENTS } from "./data";
+import { useProcurements } from "./ProcurementContext";
+import { useAuth } from "../auth/AuthContext";
 
 
 const DEMO_USERS: Record<Role, UserContext> = {
@@ -54,7 +55,9 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
-  const user = DEMO_USERS[role];
+  const auth = useAuth();
+  const { procurements } = useProcurements();
+  const user = auth.user?.role === role ? auth.user : DEMO_USERS[role];
   const { "*": splat } = useParams();
   const navigate = useNavigate();
 
@@ -125,7 +128,7 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
   };
 
   const selectedProcurement = selectedProcurementId
-    ? MOCK_PROCUREMENTS.find(p => p.id === selectedProcurementId) ?? null
+    ? procurements.find(p => p.id === selectedProcurementId) ?? null
     : null;
 
   const pageInfo = PAGE_TITLES[activeKey] ?? { title: activeKey, subtitle: "" };
@@ -145,7 +148,10 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
         user={user}
         activeKey={activeKey}
         onNavigate={handleNavigate}
-        onSignOut={onLogout}
+        onSignOut={() => {
+          auth.logout();
+          onLogout();
+        }}
       />
 
       {/* ── Right column: header + scrollable content ─────────────────────── */}

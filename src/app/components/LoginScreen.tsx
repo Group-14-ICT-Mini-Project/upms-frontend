@@ -6,17 +6,18 @@ import { Mail, Lock, Eye, EyeOff, Check, Loader2, CheckCircle2 } from "lucide-re
 
 interface LoginScreenProps {
   onBack: () => void;
-  onLoginSuccess: () => void;
+  onLogin: (email: string, password: string) => Promise<void>;
   onGoRegister: () => void;
 }
 
-export function LoginScreen({ onBack, onLoginSuccess, onGoRegister }: LoginScreenProps) {
+export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [submitError, setSubmitError] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
 
   const validate = () => {
@@ -27,12 +28,19 @@ export function LoginScreen({ onBack, onLoginSuccess, onGoRegister }: LoginScree
     return errs;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); onLoginSuccess(); }, 1200);
+    setSubmitError("");
+    try {
+      await onLogin(email, password);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Unable to sign in");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -174,6 +182,9 @@ export function LoginScreen({ onBack, onLoginSuccess, onGoRegister }: LoginScree
               </>
             ) : "Sign In"}
           </button>
+          {submitError && (
+            <p className="text-red-500 text-xs text-center">{submitError}</p>
+          )}
         </form>
 
         {/* Divider */}

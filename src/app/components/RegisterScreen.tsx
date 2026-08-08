@@ -17,11 +17,17 @@ const ROLES = [
 
 interface RegisterScreenProps {
   onBack: () => void;
-  onRegisterSuccess: () => void;
+  onRegister: (payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    role: string;
+  }) => Promise<void>;
   onGoLogin: () => void;
 }
 
-export function RegisterScreen({ onBack, onRegisterSuccess, onGoLogin }: RegisterScreenProps) {
+export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreenProps) {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -32,6 +38,7 @@ export function RegisterScreen({ onBack, onRegisterSuccess, onGoLogin }: Registe
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<typeof form>>({});
+  const [submitError, setSubmitError] = useState("");
 
   const set =
     (field: keyof typeof form) =>
@@ -52,7 +59,7 @@ export function RegisterScreen({ onBack, onRegisterSuccess, onGoLogin }: Registe
     return errs;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -60,10 +67,14 @@ export function RegisterScreen({ onBack, onRegisterSuccess, onGoLogin }: Registe
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
+    setSubmitError("");
+    try {
+      await onRegister(form);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Unable to submit registration");
+    } finally {
       setIsLoading(false);
-      onRegisterSuccess();
-    }, 1400);
+    }
   };
 
   return (
@@ -344,6 +355,9 @@ export function RegisterScreen({ onBack, onRegisterSuccess, onGoLogin }: Registe
                 </>
               )}
             </button>
+            {submitError && (
+              <p className="text-red-500 text-xs text-center">{submitError}</p>
+            )}
           </form>
 
           <p className="text-center mt-5 text-stone-500 text-sm">

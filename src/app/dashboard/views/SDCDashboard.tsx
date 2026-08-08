@@ -1,10 +1,11 @@
+import { useState } from "react";
 import type { UserContext } from "../types";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole } from "../data";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface SDCDashboardProps {
@@ -24,8 +25,9 @@ export function SDCDashboard({ user, activeTab, onTabChange, onViewProcurement, 
 }
 
 function SDCOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser, procurements } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
+  const queue = myProcurements.filter(p => p.status === "Funds Verified");
   const biddingOpen = myProcurements.filter(p => p.status === "Bidding Open");
 
   return (
@@ -45,8 +47,8 @@ function SDCOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginTop: 4 }}>
         {[
           { label: "Bidding Open", count: biddingOpen.length, color: "#1D4ED8" },
-          { label: "Funds Verified (to process)", count: MOCK_PROCUREMENTS.filter(p => p.status === "Funds Verified").length, color: "#15803D" },
-          { label: "PO Issued", count: MOCK_PROCUREMENTS.filter(p => p.status === "Purchase Order Issued").length, color: "#6D28D9" },
+          { label: "Funds Verified (to process)", count: procurements.filter(p => p.status === "Funds Verified").length, color: "#15803D" },
+          { label: "PO Issued", count: procurements.filter(p => p.status === "Purchase Order Issued").length, color: "#6D28D9" },
         ].map(s => (
           <div key={s.label} style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, padding: "16px 18px" }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.count}</div>
@@ -59,25 +61,17 @@ function SDCOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k
 }
 
 function MethodSelectionPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
   const eligible = myProcurements.filter(p => p.status === "Funds Verified");
   const [selectedMethods, setSelectedMethods] = useState<Record<string, string>>({});
 
-  const handleSelectMethod = (pr: any, method: string) => {
-    pr.method = method;
-    pr.status = "Bidding Open";
-    pr.updatedAt = new Date().toISOString();
-    pr.activityLogs = [
-      {
-        id: `log-sdc-${Date.now()}`,
-        stepIndex: 2,
-        actor: user.name,
-        role: "Supplies division",
-        action: `Procurement method selected: ${method}. Tender opened for bid submissions.`,
-        timestamp: new Date().toISOString(),
-      },
-      ...(pr.activityLogs ?? []),
-    ];
+  const handleSelectMethod = async (pr: { id: string }, method: "Shopping" | "NCB" | "ICB") => {
+    await updateProcurement(pr.id, {
+      method,
+      status: "Bidding Open",
+      notes: `Procurement method selected: ${method}. Tender opened for bid submissions.`,
+    }, { name: user.name, role: user.role });
     setSelectedMethods(p => ({ ...p, [pr.id]: method }));
   };
 
@@ -188,7 +182,8 @@ function SuppliersPanel() {
 }
 
 function BiddingPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
   const biddingItems = myProcurements.filter(p => p.status === "Bidding Open" || p.status === "Funds Verified");
 
   return (
@@ -203,7 +198,8 @@ function BiddingPanel({ onViewProcurement, user }: { onViewProcurement: (id: str
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

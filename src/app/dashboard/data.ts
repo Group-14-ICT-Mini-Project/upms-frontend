@@ -297,12 +297,12 @@ export function formatLKR(value: number): string {
 }
 
 /** Filter procurements visible to a given role/user */
-export function getProcurementsForRole(user: UserContext): Procurement[] {
+export function filterProcurementsForRole(procurements: Procurement[], user: UserContext): Procurement[] {
   const { role, faculty, department } = user;
 
   if (role === "HOD") {
     // HOD only sees procurements submitted from their department & faculty
-    return MOCK_PROCUREMENTS.filter(p =>
+    return procurements.filter(p =>
       p.faculty === faculty && p.department === department
     );
   }
@@ -311,19 +311,24 @@ export function getProcurementsForRole(user: UserContext): Procurement[] {
     // If faculty is specified on the user, they are a Faculty Bursar
     // Otherwise they are the Main Bursar and see everything
     if (faculty) {
-      return MOCK_PROCUREMENTS.filter(p => p.faculty === faculty);
+      return procurements.filter(p => p.faculty === faculty);
     }
-    return MOCK_PROCUREMENTS;
+    return procurements;
   }
 
   if (role === "SUP") {
-    return MOCK_PROCUREMENTS.filter(p =>
+    return procurements.filter(p =>
       p.status === "Bidding Open" || p.status === "Technical Evaluation"
     );
   }
 
   // Others (FIN, SDC, TEC, TB, STK) see all
-  return MOCK_PROCUREMENTS;
+  return procurements;
+}
+
+/** Filter mock procurements visible to a given role/user */
+export function getProcurementsForRole(user: UserContext): Procurement[] {
+  return filterProcurementsForRole(MOCK_PROCUREMENTS, user);
 }
 
 /** Get procurements that require action for a given role/user */

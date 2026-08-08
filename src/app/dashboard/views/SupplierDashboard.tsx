@@ -4,7 +4,8 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
-import { MOCK_PROCUREMENTS, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface SupplierDashboardProps {
@@ -26,7 +27,8 @@ export function SupplierDashboard({ user, activeTab, onTabChange, onViewProcurem
 }
 
 function SupplierOverview({ user, onTabChange, onViewProcurement }: { user: UserContext; onTabChange: (k: string) => void; onViewProcurement: (id: string) => void }) {
-  const openTenders = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const openTenders = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 32px" }}>
       <WelcomeBanner user={user} />
@@ -103,14 +105,33 @@ function MyBidsPanel() {
 }
 
 function SubmitBidPanel({ onSuccess }: { onSuccess: () => void }) {
-  const openTenders = getProcurementsForRole("SUP");
+  const { getProcurementsForUser, submitBid } = useProcurements();
+  const supplierUser: UserContext = { role: "SUP", name: "Supplier", title: "Supplier / Bidder", avatarInitials: "SU" };
+  const openTenders = getProcurementsForUser(supplierUser);
   const [form, setForm] = useState({ prId: "", amount: "", bidBond: false, vatDeclaration: false, technicalSpec: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(onSuccess, 1500);
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      await submitBid(form.prId, {
+        bidderName: "Current Supplier",
+        amount: Number(form.amount),
+        technicalSpec: form.technicalSpec,
+        bidBond: form.bidBond,
+        vatDeclaration: form.vatDeclaration,
+      });
+      setSubmitted(true);
+      setTimeout(onSuccess, 1500);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Unable to submit bid");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -157,10 +178,11 @@ function SubmitBidPanel({ onSuccess }: { onSuccess: () => void }) {
           ))}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 4 }}>
             <button type="button" onClick={onSuccess} style={{ padding: "9px 20px", background: "#F3F4F6", color: "#374151", border: "1px solid #E5E7EB", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-            <button type="submit" disabled={!form.prId || !form.amount || !form.bidBond || !form.vatDeclaration} style={{ padding: "9px 24px", background: !form.prId || !form.amount || !form.bidBond || !form.vatDeclaration ? "#D1D5DB" : "#7A0C0C", color: "#FFFFFF", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              Submit Sealed Bid
+            <button type="submit" disabled={isSubmitting || !form.prId || !form.amount || !form.bidBond || !form.vatDeclaration} style={{ padding: "9px 24px", background: isSubmitting || !form.prId || !form.amount || !form.bidBond || !form.vatDeclaration ? "#D1D5DB" : "#7A0C0C", color: "#FFFFFF", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: isSubmitting ? "not-allowed" : "pointer" }}>
+              {isSubmitting ? "Submitting..." : "Submit Sealed Bid"}
             </button>
           </div>
+          {submitError && <p style={{ margin: 0, fontSize: 12, color: "#DC2626", fontWeight: 600 }}>{submitError}</p>}
         </div>
       </form>
     </div>

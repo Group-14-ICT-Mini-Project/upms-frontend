@@ -4,7 +4,8 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
-import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { formatLKR } from "../data";
+import { useProcurements } from "../ProcurementContext";
 
 
 interface StorekeeperDashboardProps {
@@ -22,8 +23,9 @@ export function StorekeeperDashboard({ user, activeTab, onTabChange, onViewProcu
 }
 
 function STKOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const queue = getActionQueueForRole(user);
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
+  const queue = myProcurements.filter(p => p.status === "Awaiting Delivery");
   return (
     <div style={{ padding: "28px 32px" }}>
       <WelcomeBanner user={user} />
@@ -34,31 +36,21 @@ function STKOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k
 }
 
 function GRNPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
-  const myProcurements = getProcurementsForRole(user);
+  const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const myProcurements = getProcurementsForUser(user);
   const deliveries = myProcurements.filter(p => p.status === "Awaiting Delivery");
   const [issued, setIssued] = useState<Set<string>>(new Set());
   const [grns, setGrns] = useState<Record<string, { qty: string; condition: string; note: string }>>({});
   const [form, setForm] = useState<Record<string, { qty: string; condition: string; note: string }>>({});
 
-  const handleIssue = (id: string) => {
-    const pr = MOCK_PROCUREMENTS.find(p => p.id === id);
-    if (pr) {
-      const f = form[id] ?? { qty: "", condition: "Good", note: "" };
-      pr.status = "Quality Report Required";
-      pr.grnNumber = `GRN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      pr.updatedAt = new Date().toISOString();
-      pr.activityLogs = [
-        {
-          id: `log-stk-${Date.now()}`,
-          stepIndex: 7,
-          actor: user.name ?? "Saman Rathnayake",
-          role: "Storekeeper",
-          action: `Goods received and inspected. Qty: ${f.qty}, Condition: ${f.condition}. ${f.note ? "Notes: " + f.note : ""}. GRN ${pr.grnNumber} issued.`,
-          timestamp: new Date().toISOString(),
-        },
-        ...(pr.activityLogs ?? []),
-      ];
-    }
+  const handleIssue = async (id: string) => {
+    const f = form[id] ?? { qty: "", condition: "Good", note: "" };
+    const grnNumber = `GRN-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    await updateProcurement(id, {
+      status: "Quality Report Required",
+      grnNumber,
+      notes: `Goods received and inspected. Qty: ${f.qty}, Condition: ${f.condition}. ${f.note ? "Notes: " + f.note : ""}. GRN ${grnNumber} issued.`,
+    }, { name: user.name, role: user.role });
     setIssued(p => new Set([...p, id]));
     setGrns(p => ({ ...p, [id]: form[id] ?? { qty: "", condition: "Good", note: "" } }));
   };
@@ -151,7 +143,8 @@ function GRNPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const list = getProcurementsForRole(user);
+  const { getProcurementsForUser } = useProcurements();
+  const list = getProcurementsForUser(user);
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

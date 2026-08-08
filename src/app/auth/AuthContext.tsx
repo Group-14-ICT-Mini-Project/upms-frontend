@@ -3,7 +3,6 @@ import type { Role, UserContext } from "../dashboard/types";
 import { ROLE_META } from "../dashboard/types";
 import * as authApi from "../api/auth";
 import {
-  getAuthToken,
   setAuthToken,
   setRefreshToken,
   clearAuthData,
@@ -55,15 +54,14 @@ interface AuthContextValue {
   register: (payload: authApi.RegisterRequest) => Promise<void>;
   logout: () => void;
   setDemoUser: (user: UserContext) => void;
-  updateProfile: (changes: Pick<UserContext, "name" | "faculty" | "department">) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Restore user from localStorage on mount (no /me endpoint needed)
+  // Restore the saved profile on refresh. Demo sessions intentionally have no
+  // access token, so requiring a token here would discard their selected role.
   const [user, setUser] = useState<UserContext | null>(() => {
-    if (!getAuthToken()) return null;
     return getStoredUser<UserContext>();
   });
   const [isLoading] = useState(false);
@@ -92,18 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setDemoUser(nextUser) {
       setStoredUser(nextUser);
       setUser(nextUser);
-    },
-    updateProfile(changes) {
-      setUser(currentUser => {
-        if (!currentUser) return currentUser;
-        const nextUser = {
-          ...currentUser,
-          ...changes,
-          avatarInitials: changes.name.trim().slice(0, 2).toUpperCase() || currentUser.avatarInitials,
-        };
-        setStoredUser(nextUser);
-        return nextUser;
-      });
     },
   }), [user, isLoading]);
 

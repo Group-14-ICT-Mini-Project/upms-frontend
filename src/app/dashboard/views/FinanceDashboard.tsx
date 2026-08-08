@@ -4,9 +4,10 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
+import { PageTitleBar } from "../components/ContentHeader";
 import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { SkeletonWelcomeBanner, SkeletonBudgetBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
+import { SkeletonWelcomeBanner, SkeletonBudgetBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonTable } from "../components/SkeletonLoader";
 import { useProcurements } from "../ProcurementContext";
 
 
@@ -307,8 +308,16 @@ function PaymentsPanel({ onViewProcurementDetails, user }: { onViewProcurementDe
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const { getProcurementsForUser } = useProcurements();
+  const { getProcurementsForUser, isLoading } = useProcurements();
   const list = getProcurementsForUser(user);
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px" }}>
+        <PageTitleBar title="All Procurements" subtitle="Loading procurement records" />
+        <SkeletonTable rows={6} />
+      </div>
+    );
+  }
   return (
     <div style={{ padding: "28px 32px" }}>
       <div style={{ marginBottom: 20 }}>

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { BidEntry, Procurement, ProcurementMethod, ProcurementStatus, Role, UserContext } from "./types";
-import { MOCK_PROCUREMENTS, filterProcurementsForRole } from "./data";
+import type { BidEntry, Procurement, Role, UserContext } from "./types";
+import { filterProcurementsForRole } from "./data";
 import * as procurementApi from "../api/procurements";
 import { ApiError } from "../api/client";
 
@@ -16,14 +16,6 @@ interface ProcurementContextValue {
 }
 
 const ProcurementContext = createContext<ProcurementContextValue | null>(null);
-
-function nextProcurementId(existing: Procurement[]) {
-  const max = existing.reduce((highest, item) => {
-    const number = Number(item.id.match(/\d+$/)?.[0] ?? 0);
-    return Math.max(highest, number);
-  }, 0);
-  return `PR-2026-${String(max + 1).padStart(3, "0")}`;
-}
 
 function mergeProcurement(list: Procurement[], next: Procurement) {
   const exists = list.some(item => item.id === next.id);
@@ -60,8 +52,8 @@ function applyLocalUpdate(current: Procurement, payload: procurementApi.UpdatePr
 }
 
 export function ProcurementProvider({ children }: { children: React.ReactNode }) {
-  const [procurements, setProcurements] = useState<Procurement[]>(MOCK_PROCUREMENTS);
-  const [isLoading, setIsLoading] = useState(false);
+  const [procurements, setProcurements] = useState<Procurement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -71,6 +63,7 @@ export function ProcurementProvider({ children }: { children: React.ReactNode })
       const data = await procurementApi.listProcurements();
       setProcurements(data);
     } catch (err) {
+      setProcurements([]);
       if (!(err instanceof ApiError && err.status === 401)) {
         setError(err instanceof Error ? err.message : "Failed to load procurements");
       }
@@ -92,34 +85,9 @@ export function ProcurementProvider({ children }: { children: React.ReactNode })
       return filterProcurementsForRole(procurements, user);
     },
     async createRequisition(payload) {
-      try {
-        const created = await procurementApi.createProcurement(payload);
-        setProcurements(current => mergeProcurement(current, created));
-        return created;
-      } catch {
-        const created: Procurement = {
-          id: nextProcurementId(procurements),
-          title: payload.title,
-          faculty: payload.faculty,
-          department: payload.department,
-          value: payload.value,
-          method: "â€”" as ProcurementMethod,
-          status: "Pending Fund Verification",
-          updatedAt: new Date().toISOString(),
-          submittedBy: payload.submittedBy,
-          description: payload.description,
-          activityLog: [{
-            id: `log-${Date.now()}`,
-            stepIndex: 0,
-            actor: payload.submittedBy ?? "HOD",
-            role: "HOD",
-            action: "Purchase requisition created.",
-            timestamp: new Date().toISOString(),
-          }],
-        };
-        setProcurements(current => [created, ...current]);
-        return created;
-      }
+      const created = await procurementApi.createProcurement(payload);
+      setProcurements(current => mergeProcurement(current, created));
+      return created;
     },
     async updateProcurement(id, payload, actor) {
       try {

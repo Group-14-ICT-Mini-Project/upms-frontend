@@ -9,7 +9,7 @@ import { BudgetComparison } from "../components/BudgetComparison";
 import { PageTitleBar } from "../components/ContentHeader";
 import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonTable } from "../components/SkeletonLoader";
 import { useProcurements } from "../ProcurementContext";
 
 
@@ -231,8 +231,16 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 }
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const { getProcurementsForUser } = useProcurements();
+  const { getProcurementsForUser, isLoading } = useProcurements();
   const list = getProcurementsForUser(user);
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px" }}>
+        <PageTitleBar title="All Procurements" subtitle="Loading procurement records" />
+        <SkeletonTable rows={6} />
+      </div>
+    );
+  }
   return (
     <div style={{ padding: "28px 28px" }}>
       <PageTitleBar title="All Procurements" subtitle={`${list.length} records visible for your role`} />

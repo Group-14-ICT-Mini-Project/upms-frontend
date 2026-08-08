@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import type { UserContext } from "../types";
-import type { Procurement } from "../types";
+import { useMemo } from "react";
+import type { Procurement, UserContext } from "../types";
 import { useProcurements } from "../ProcurementContext";
 
 interface DashboardData {
@@ -8,43 +7,19 @@ interface DashboardData {
   procurements: Procurement[];
 }
 
-/**
- * useDashboardData
- *
- * Simulates async data fetching with a realistic 1–1.4 second delay.
- * Returns { isLoading, data } — identical API to what a real fetch hook would return.
- *
- * To connect to a real API, replace the setTimeout block with your fetch() / axios
- * call inside the useEffect, keeping the isLoading / setData pattern unchanged.
- */
 export function useDashboardData(user: UserContext): {
   isLoading: boolean;
-  data: DashboardData | null;
+  data: DashboardData;
 } {
-  const { getProcurementsForUser, procurements } = useProcurements();
-  const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState<DashboardData | null>(null);
+  const { getProcurementsForUser, procurements, isLoading } = useProcurements();
 
-  useEffect(() => {
-    // Reset when role changes (e.g. user switches account)
-    setIsLoading(true);
-    setData(null);
-
-    // Simulated network delay: 1000–1400 ms
-    const delay = 1000 + Math.random() * 400;
-
-    const timer = setTimeout(() => {
-      const visibleProcurements = getProcurementsForUser(user);
-      setData({
-        queue: getActionQueueForUser(user, visibleProcurements),
-        procurements: visibleProcurements,
-      });
-      setIsLoading(false);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.role, user.faculty, user.department, procurements]);
+  const data = useMemo<DashboardData>(() => {
+    const visibleProcurements = getProcurementsForUser(user);
+    return {
+      queue: getActionQueueForUser(user, visibleProcurements),
+      procurements: visibleProcurements,
+    };
+  }, [getProcurementsForUser, procurements, user]);
 
   return { isLoading, data };
 }

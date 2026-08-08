@@ -458,8 +458,39 @@ interface ReqForm {
   quantity: string;
   unit: string;
   approxValue: string;
+  procurementMethodId: string;
+  procurementCategoryId: string;
+  openingDate: string;
+  closingDate: string;
+  documentFee: string;
+  requiresBidBond: string;
+  bidBondPercentage: string;
   preparedBy: string;
   signature: string;
+}
+
+const PROCUREMENT_METHODS = [
+  { id: "1", label: "National Shopping Method" },
+  { id: "2", label: "National Competitive Bidding" },
+  { id: "3", label: "Limited Competitive Bidding" },
+  { id: "4", label: "Direct Buying" },
+];
+
+const PROCUREMENT_CATEGORIES = [
+  { id: "1", label: "Goods" },
+  { id: "2", label: "Services" },
+  { id: "3", label: "Works" },
+  { id: "4", label: "Information Technology" },
+  { id: "5", label: "Maintenance" },
+];
+
+function toDateTimeLocal(date: Date) {
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function toBackendDateTime(value: string) {
+  return value.length === 16 ? `${value}:00` : value;
 }
 
 function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: () => void; onViewProcurement: (id: string) => void; user?: { name?: string; title?: string; department?: string; faculty?: string } }) {
@@ -473,6 +504,8 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [errors, setErrors]   = useState<Partial<Record<keyof ReqForm, string>>>({});
+  const defaultOpeningDate = toDateTimeLocal(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const defaultClosingDate = toDateTimeLocal(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000));
   const [form, setForm]       = useState<ReqForm>({
     title:            "",
     faculty:          user?.faculty || "Faculty of Applied Sciences",
@@ -485,6 +518,13 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
     quantity:         "",
     unit:             "units",
     approxValue:      "",
+    procurementMethodId: "1",
+    procurementCategoryId: "1",
+    openingDate:      defaultOpeningDate,
+    closingDate:      defaultClosingDate,
+    documentFee:      "8000",
+    requiresBidBond:  "true",
+    bidBondPercentage: "5",
     preparedBy:       hodName,
     signature:        "",
   });
@@ -550,9 +590,19 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
         reason: form.reason,
         quantity: Number(form.quantity),
         unit: form.unit,
-        value: Number(form.approxValue),
+        estimatedValue: Number(form.approxValue),
+        procurementMethodId: Number(form.procurementMethodId),
+        procurementCategoryId: Number(form.procurementCategoryId),
+        openingDate: toBackendDateTime(form.openingDate),
+        closingDate: toBackendDateTime(form.closingDate),
+        documentFee: Number(form.documentFee),
+        requiresBidBond: form.requiresBidBond === "true",
+        bidBondPercentage: form.requiresBidBond === "true" ? Number(form.bidBondPercentage) : 0,
         submittedBy: form.preparedBy,
         signature: signatureDataUrl,
+        requisitionType: form.requisitionType,
+        currentStockBalance: form.stockBalance ? Number(form.stockBalance) : undefined,
+        fundingSource: form.fundingSource,
       });
       setCreatedId(created.id);
       setSubmitted(true);
@@ -984,8 +1034,16 @@ const mInput = (hasError: boolean): React.CSSProperties => ({
 });
 
 function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
-  const { getProcurementsForUser } = useProcurements();
+  const { getProcurementsForUser, isLoading } = useProcurements();
   const list = getProcurementsForUser(user);
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px" }}>
+        <PageTitleBar title="All Procurements" subtitle="Loading procurement records" />
+        <SkeletonTable rows={6} />
+      </div>
+    );
+  }
   return (
     <div style={{ padding: "28px 28px" }}>
       <PageTitleBar title="All Procurements" subtitle={`${list.length} records visible for your role`} />

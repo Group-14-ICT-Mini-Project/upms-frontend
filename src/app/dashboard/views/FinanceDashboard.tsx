@@ -6,10 +6,6 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Finance Division Dashboard — Payment Processing
-// Tabs: Dashboard · Payments · All Procurements
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface FinanceDashboardProps {
   user: UserContext;
@@ -30,9 +26,155 @@ function FinanceOverview({ user, onTabChange }: { user: UserContext; onTabChange
   const myProcurements = getProcurementsForRole(user);
   const totalPending = queue.reduce((sum, pr) => sum + pr.value, 0);
 
+  const ANNUAL_BUDGET = 85_000_000; // LKR 85 Million
+  const spent = myProcurements
+    .filter(p => p.status === "Completed")
+    .reduce((sum, p) => sum + p.value, 0);
+  const pending_val = myProcurements
+    .filter(p => p.status !== "Completed" && p.status !== "Rejected")
+    .reduce((sum, p) => sum + p.value, 0);
+  const remaining = ANNUAL_BUDGET - spent - pending_val;
+  const spentPct   = Math.min(100, Math.round((spent / ANNUAL_BUDGET) * 100));
+  const pendingPct = Math.min(100 - spentPct, Math.round((pending_val / ANNUAL_BUDGET) * 100));
+
   return (
     <div style={{ padding: "28px 32px" }}>
       <WelcomeBanner user={user} />
+
+      <div style={{
+        background: "linear-gradient(135deg, #7a530cff 0%, #a37717ff 100%)",
+        borderRadius: 16,
+        padding: "24px 28px",
+        marginBottom: 24,
+        position: "relative",
+        overflow: "hidden",
+        boxShadow: "0 4px 20px rgba(122,83,12,0.25)",
+      }}>
+        {/* Decorative blobs */}
+        <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.07)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -30, right: 80, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
+
+        {/* Header row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.88)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+              Annual Procurement Budget — {new Date().getFullYear()}
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.02em" }}>
+              {formatLKR(ANNUAL_BUDGET)}
+            </div>
+          </div>
+          <div style={{
+            background: "rgba(255,255,255,0.15)",
+            borderRadius: 10,
+            padding: "6px 14px",
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#FFFFFF",
+            backdropFilter: "blur(4px)",
+          }}>
+            {spentPct + pendingPct}% Utilized
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{
+            height: 10,
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.2)",
+            overflow: "hidden",
+            display: "flex",
+          }}>
+            {/* Spent segment */}
+            <div style={{
+              width: `${spentPct}%`,
+              background: "rgba(255,255,255,0.85)",
+              borderRadius: spentPct > 0 ? "8px 0 0 8px" : 0,
+              transition: "width 0.6s ease",
+            }} />
+            {/* Committed/pending segment */}
+            <div style={{
+              width: `${pendingPct}%`,
+              background: "rgba(255,255,255,0.40)",
+              transition: "width 0.6s ease",
+            }} />
+          </div>
+          <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.85)" }} />
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.88)", fontWeight: 600 }}>Spent ({spentPct}%)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.40)" }} />
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.88)", fontWeight: 600 }}>Committed ({pendingPct}%)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(255,255,255,0.18)" }} />
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.88)", fontWeight: 600 }}>Available ({100 - spentPct - pendingPct}%)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Three metric tiles */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          {/* Spent */}
+          <div style={{
+            background: "rgba(255,255,255,0.13)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            backdropFilter: "blur(4px)",
+          }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.88)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+              Total Spent
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", marginBottom: 2 }}>
+              {formatLKR(spent)}
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)" }}>
+              Payments processed
+            </div>
+          </div>
+
+          {/* Committed */}
+          <div style={{
+            background: "rgba(255,255,255,0.13)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            backdropFilter: "blur(4px)",
+          }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.88)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+              Committed
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", marginBottom: 2 }}>
+              {formatLKR(pending_val)}
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)" }}>
+              Active procurements
+            </div>
+          </div>
+
+          {/* Remaining */}
+          <div style={{
+            background: "rgba(255,255,255,0.20)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            border: "1px solid rgba(255,255,255,0.25)",
+            backdropFilter: "blur(4px)",
+          }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.95)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
+              Available Balance
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", marginBottom: 2 }}>
+              {formatLKR(Math.max(0, remaining))}
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.90)" }}>
+              {remaining < 0 ? "⚠ Over budget" : "Unallocated funds"}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <StatCardRow total={myProcurements.length} inQueue={queue.length} actionRequired={queue.length} completed={2} />
 
       {/* Total pending amount */}

@@ -8,9 +8,6 @@ import { useState } from "react";
 import usjLogo from "../../../usj-logo.png";
 import type { Role, UserContext } from "../types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sidebar nav config per role
-// ─────────────────────────────────────────────────────────────────────────────
 
 type IconComponent = typeof LayoutDashboard;
 
@@ -132,9 +129,6 @@ const GENERAL_ITEMS: NavItem[] = [
   { key: "_logout",   label: "Log out",   icon: LogOut },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sidebar component
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
   user: UserContext;

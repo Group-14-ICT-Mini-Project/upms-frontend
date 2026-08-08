@@ -1,8 +1,5 @@
 import type { ProcurementStatus } from "../types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StatusBadge — colour-coded procurement status pill
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface StatusConfig {
   bg: string;

@@ -4,13 +4,10 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
+import { ScoringMatrix, type ScoringCriteria } from "../components/ScoringMatrix";
 import { EmptyState } from "../components/EmptyState";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEC Dashboard — TEC Member (Technical Evaluation Committee)
-// Tabs: Dashboard · Evaluations · All Procurements
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface TECDashboardProps {
   user: UserContext;
@@ -49,6 +46,16 @@ function TECOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k
 function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
   const myProcurements = getProcurementsForRole(user);
   const items = myProcurements.filter(p => p.status === "Technical Evaluation");
+  const [selected, setSelected] = useState<any>(null);
+  const [scores, setScores] = useState<{ technical: string; financial: string; compliance: string }>({ technical: "", financial: "", compliance: "" });
+
+  // Scoring criteria for the matrix
+  const scoringCriteria: ScoringCriteria[] = [
+    { id: "compliance", name: "Bid Compliance", weight: 20, maxScore: 100 },
+    { id: "technical", name: "Technical Merit", weight: 40, maxScore: 100 },
+    { id: "financial", name: "Financial Viability", weight: 40, maxScore: 100 },
+  ];
+
   const handleSubmitReport = () => {
     if (!selected) return;
     selected.status = "Authority Approval";
@@ -59,7 +66,7 @@ function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcuremen
         stepIndex: 4,
         actor: user.name,
         role: "TEC Member",
-        action: `Technical Evaluation completed. Scores - Technical: ${scores.technical}, Financial: ${scores.financial}, Compliance: ${scores.compliance}. Bid Evaluation Sheet (BES) submitted.`,
+        action: `Technical Evaluation completed. Compliance: ${scores.compliance}, Technical: ${scores.technical}, Financial: ${scores.financial}. Bid Evaluation Sheet (BES) submitted to Tender Board.`,
         timestamp: new Date().toISOString(),
       },
       ...(selected.activityLogs ?? []),
@@ -93,63 +100,93 @@ function EvaluationsPanel({ onViewProcurementDetails, user }: { onViewProcuremen
           </div>
 
           {selected && (
-            <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, padding: "24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                <div>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, marginBottom: 4 }}>{selected.title}</h3>
-                  <p style={{ fontSize: 12, color: "#6B7280", margin: 0 }}>{selected.id} · {selected.faculty} · {formatLKR(selected.value)}</p>
-                </div>
-                <button
-                  onClick={() => onViewProcurementDetails(selected.id)}
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: "6px 14px",
-                    background: "#F3F4F6",
-                    color: "#374151",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: 7,
-                    cursor: "pointer",
-                  }}
-                >
-                  View Details
-                </button>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {[["Technical Score (0–100)", "technical"], ["Financial Score (0–100)", "financial"], ["Compliance Score (0–100)", "compliance"]].map(([label, key]) => (
-                  <div key={key}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{label}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={scores[key as keyof typeof scores]}
-                      onChange={e => setScores(p => ({ ...p, [key]: e.target.value }))}
-                      placeholder="Enter score"
-                      style={{ width: "100%", padding: "9px 12px", border: "1px solid #D1D5DB", borderRadius: 7, fontSize: 13, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }}
-                    />
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Header */}
+              <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, marginBottom: 4 }}>{selected.title}</h3>
+                    <p style={{ fontSize: 12, color: "#6B7280", margin: 0 }}>{selected.id} · {selected.faculty} · {formatLKR(selected.value)}</p>
                   </div>
-                ))}
+                  <button
+                    onClick={() => onViewProcurementDetails(selected.id)}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "6px 14px",
+                      background: "#F3F4F6",
+                      color: "#374151",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: 7,
+                      cursor: "pointer",
+                    }}
+                  >
+                    View Full Details
+                  </button>
+                </div>
               </div>
 
+              {/* Show submitted bids */}
+              {selected.bids && selected.bids.length > 0 && (
+                <div style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 10,
+                  padding: 20,
+                }}>
+                  <h4 style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: "0 0 12px" }}>
+                    Sealed Bids Submitted ({selected.bids.length})
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {selected.bids.map((bid: any, idx: number) => (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: 10,
+                          background: "#F9FAFB",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: 6,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#111827" }}>{bid.bidderName}</div>
+                          <div style={{ fontSize: 10, color: "#6B7280" }}>{bid.bidderContact}</div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#B45309" }}>
+                          {formatLKR(bid.amount)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Scoring Matrix */}
+              <ScoringMatrix
+                criteria={scoringCriteria}
+                bidders={selected.bids?.map((b: any) => ({ id: b.bidderName, name: b.bidderName })) || []}
+              />
+
+              {/* Submit button */}
               <button
                 onClick={handleSubmitReport}
                 disabled={!scores.technical || !scores.financial || !scores.compliance}
                 style={{
-                  marginTop: 20,
                   width: "100%",
-                  padding: "10px",
+                  padding: "12px",
                   background: !scores.technical || !scores.financial || !scores.compliance ? "#D1D5DB" : "#7A0C0C",
                   color: "#FFFFFF",
                   border: "none",
-                  borderRadius: 7,
+                  borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 700,
                   cursor: !scores.technical ? "not-allowed" : "pointer",
                 }}
               >
-                Submit BES Report to Tender Board
+                Submit Bid Evaluation Sheet (BES) to Tender Board
               </button>
             </div>
           )}

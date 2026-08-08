@@ -6,10 +6,6 @@ import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Storekeeper Dashboard — GRN Generation
-// Tabs: Dashboard · GRN · All Procurements
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface StorekeeperDashboardProps {
   user: UserContext;

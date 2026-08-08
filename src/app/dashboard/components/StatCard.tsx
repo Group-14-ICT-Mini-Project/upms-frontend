@@ -1,9 +1,6 @@
 import { type ReactNode } from "react";
 import { ClipboardList, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StatCard — summary metric widget (Total, Queue, Action Required, Completed)
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface StatCardProps {
   label: string;
@@ -69,9 +66,6 @@ export function StatCard({ label, value, highlight = false, icon }: StatCardProp
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StatCardRow — responsive row of 4 stat cards with lucide icons
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface StatCardRowProps {
   total: number;

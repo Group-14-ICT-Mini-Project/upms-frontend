@@ -3,9 +3,6 @@ import type { Procurement } from "../types";
 import { StatusBadge } from "./StatusBadge";
 import { formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProcurementTable — full data table of procurement records
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface ProcurementTableProps {
   procurements: Procurement[];
@@ -188,7 +185,7 @@ export function ProcurementTable({
                         (e.currentTarget as HTMLElement).style.borderColor = "#E5E7EB";
                       }}
                     >
-                      View Status →
+                      View Status
                     </button>
                   )}
                 </td>

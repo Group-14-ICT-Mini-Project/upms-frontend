@@ -8,10 +8,6 @@ import { EmptyState } from "../components/EmptyState";
 import { StatusBadge } from "../components/StatusBadge";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tender Board Dashboard
-// Tabs: Dashboard · Approvals · All Procurements
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface TBDashboardProps {
   user: UserContext;

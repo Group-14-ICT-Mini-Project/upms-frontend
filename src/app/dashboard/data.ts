@@ -1,9 +1,6 @@
 import type { Procurement, ProcurementStatus, UserContext } from "./types";
 import { WORKFLOW_STEPS } from "./types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UPMS Dashboard — Shared Mock Data
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const MOCK_PROCUREMENTS: Procurement[] = [
   {

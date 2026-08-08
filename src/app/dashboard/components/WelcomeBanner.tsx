@@ -1,8 +1,5 @@
 import type { UserContext } from "../types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WelcomeBanner — crimson welcome card displayed at top of dashboard
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface WelcomeBannerProps {
   user: UserContext;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { LoginScreen } from "./components/LoginScreen";
 import { RegisterScreen } from "./components/RegisterScreen";
@@ -6,63 +6,90 @@ import { WaitingApproval } from "./components/WaitingApproval";
 import { DashboardLayout } from "./dashboard/DashboardLayout";
 import type { Role } from "./dashboard/types";
 import { ROLE_META } from "./dashboard/types";
+import { useState } from "react";
 import usjLogo from "../usj-logo.png";
 
-type Screen = "welcome" | "login" | "register" | "waiting" | "role-picker" | "dashboard";
-
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("welcome");
-  const [selectedRole, setSelectedRole] = useState<Role>("HOD");
-
   return (
-    <div className="size-full">
-      {screen === "welcome" && (
-        <WelcomeScreen
-          onLogin={() => setScreen("login")}
-          onSignUp={() => setScreen("register")}
-        />
-      )}
-      {screen === "login" && (
-        <LoginScreen
-          onBack={() => setScreen("welcome")}
-          onLoginSuccess={() => setScreen("role-picker")}
-          onGoRegister={() => setScreen("register")}
-        />
-      )}
-      {screen === "register" && (
-        <RegisterScreen
-          onBack={() => setScreen("welcome")}
-          onRegisterSuccess={() => setScreen("waiting")}
-          onGoLogin={() => setScreen("login")}
-        />
-      )}
-      {screen === "waiting" && (
-        <WaitingApproval
-          onGoBack={() => setScreen("register")}
-          onBackToLogin={() => setScreen("login")}
-        />
-      )}
-      {screen === "role-picker" && (
-        <RolePicker
-          onSelect={(role) => {
-            setSelectedRole(role);
-            setScreen("dashboard");
-          }}
-        />
-      )}
-      {screen === "dashboard" && (
-        <DashboardLayout
-          role={selectedRole}
-          onLogout={() => setScreen("role-picker")}
-        />
-      )}
-    </div>
+    <Routes>
+      <Route path="/"             element={<WelcomeRoute />} />
+      <Route path="/login"        element={<LoginRoute />} />
+      <Route path="/register"     element={<RegisterRoute />} />
+      <Route path="/waiting"      element={<WaitingRoute />} />
+      <Route path="/select-role"  element={<RolePickerRoute />} />
+      <Route path="/dashboard/:role/*" element={<DashboardRoute />} />
+      {/* Fallback — redirect anything unknown back to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RolePicker — demo role selection screen matching the demo site
-// ─────────────────────────────────────────────────────────────────────────────
+
+function WelcomeRoute() {
+  const nav = useNavigate();
+  return (
+    <WelcomeScreen
+      onLogin={() => nav("/login")}
+      onSignUp={() => nav("/register")}
+    />
+  );
+}
+
+function LoginRoute() {
+  const nav = useNavigate();
+  return (
+    <LoginScreen
+      onBack={() => nav("/")}
+      onLoginSuccess={() => nav("/select-role")}
+      onGoRegister={() => nav("/register")}
+    />
+  );
+}
+
+function RegisterRoute() {
+  const nav = useNavigate();
+  return (
+    <RegisterScreen
+      onBack={() => nav("/")}
+      onRegisterSuccess={() => nav("/waiting")}
+      onGoLogin={() => nav("/login")}
+    />
+  );
+}
+
+function WaitingRoute() {
+  const nav = useNavigate();
+  return (
+    <WaitingApproval
+      onGoBack={() => nav("/register")}
+      onBackToLogin={() => nav("/login")}
+    />
+  );
+}
+
+function RolePickerRoute() {
+  const nav = useNavigate();
+  return (
+    <RolePicker onSelect={(role) => nav(`/dashboard/${role.toLowerCase()}`)} />
+  );
+}
+
+function DashboardRoute() {
+  const nav = useNavigate();
+  const { role: roleParam } = useParams<{ role: string }>();
+  const roleSlug = (roleParam ?? "").toUpperCase() as Role;
+  const validRoles: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
+  if (!validRoles.includes(roleSlug)) {
+    return <Navigate to="/select-role" replace />;
+  }
+  return (
+    <DashboardLayout
+      role={roleSlug}
+      onLogout={() => nav("/select-role")}
+    />
+  );
+}
+
 
 const ROLES: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
 
@@ -84,7 +111,6 @@ function RolePicker({ onSelect }: { onSelect: (r: Role) => void }) {
     >
       {/* Logo + title */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
-        {/* USJ logo */}
         <div
           style={{
             width: 64,

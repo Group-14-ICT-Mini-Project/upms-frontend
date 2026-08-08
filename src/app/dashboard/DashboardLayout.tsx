@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router";
 import type { Role, UserContext } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { ContentHeader } from "./components/ContentHeader";
@@ -14,21 +15,17 @@ import { ProcurementStatusTracker } from "./components/ProcurementStatusTracker"
 import { ProcurementDetails } from "./components/ProcurementDetails";
 import { MOCK_PROCUREMENTS } from "./data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DashboardLayout — sidebar + main content shell
-// Layout: [Fixed Left Sidebar 248px] | [Right: sticky header + scrollable content]
-// ─────────────────────────────────────────────────────────────────────────────
 
 const DEMO_USERS: Record<Role, UserContext> = {
-  HOD: { role: "HOD", name: "Dr. Nimal Perera",          title: "Head of Department",      faculty: "Faculty of Applied Sciences", department: "Computer Science",  avatarInitials: "NP" },
-  BUR: { role: "BUR", name: "Mr. Kamal Silva",            title: "Bursar (Main)",           faculty: undefined,                     department: undefined,           avatarInitials: "KS" },
-  FBUR: { role: "FBUR", name: "Mrs. Indrani Perera",     title: "Faculty Bursar",          faculty: "Faculty of Applied Sciences", department: undefined,           avatarInitials: "IP" },
-  SDC: { role: "SDC", name: "Ms. Dilhani Jayasena",       title: "Supplies Division Clerk", faculty: undefined,                     department: "Supplies Division", avatarInitials: "DJ" },
-  TEC: { role: "TEC", name: "Dr. Ruwan Fernando",         title: "TEC Member",              faculty: "Faculty of Engineering",      department: undefined,           avatarInitials: "RF" },
-  TB:  { role: "TB",  name: "Prof. Anura Wickramasinghe", title: "Tender Board Member",     faculty: undefined,                     department: undefined,           avatarInitials: "AW" },
-  STK: { role: "STK", name: "Mr. Saman Rathnayake",       title: "Storekeeper",             faculty: undefined,                     department: "Central Stores",    avatarInitials: "SR" },
-  SUP: { role: "SUP", name: "Lanka Lab Supplies Co.",     title: "Supplier / Bidder",       faculty: undefined,                     department: undefined,           avatarInitials: "LL" },
-  FIN: { role: "FIN", name: "Ms. Priyanka Perera",        title: "Finance Division",        faculty: undefined,                     department: "Finance Dept",      avatarInitials: "PP" },
+  HOD:  { role: "HOD",  name: "Dr. Nimal Perera",          title: "Head of Department",      faculty: "Faculty of Applied Sciences", department: "Computer Science",  avatarInitials: "NP" },
+  BUR:  { role: "BUR",  name: "Mr. Kamal Silva",            title: "Bursar (Main)",           faculty: undefined,                     department: undefined,           avatarInitials: "KS" },
+  FBUR: { role: "FBUR", name: "Mrs. Indrani Perera",        title: "Faculty Bursar",          faculty: "Faculty of Applied Sciences", department: undefined,           avatarInitials: "IP" },
+  SDC:  { role: "SDC",  name: "Ms. Dilhani Jayasena",       title: "Supplies Division Clerk", faculty: undefined,                     department: "Supplies Division", avatarInitials: "DJ" },
+  TEC:  { role: "TEC",  name: "Dr. Ruwan Fernando",         title: "TEC Member",              faculty: "Faculty of Engineering",      department: undefined,           avatarInitials: "RF" },
+  TB:   { role: "TB",   name: "Prof. Anura Wickramasinghe", title: "Tender Board Member",     faculty: undefined,                     department: undefined,           avatarInitials: "AW" },
+  STK:  { role: "STK",  name: "Mr. Saman Rathnayake",       title: "Storekeeper",             faculty: undefined,                     department: "Central Stores",    avatarInitials: "SR" },
+  SUP:  { role: "SUP",  name: "Lanka Lab Supplies Co.",     title: "Supplier / Bidder",       faculty: undefined,                     department: undefined,           avatarInitials: "LL" },
+  FIN:  { role: "FIN",  name: "Ms. Priyanka Perera",        title: "Finance Division",        faculty: undefined,                     department: "Finance Dept",      avatarInitials: "PP" },
 };
 
 /** Map nav key → page title for the breadcrumb header */
@@ -58,25 +55,73 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
   const user = DEMO_USERS[role];
-  const [activeKey, setActiveKey] = useState<string>("dashboard");
-  const [selectedProcurementId, setSelectedProcurementId] = useState<string | null>(null);
+  const { "*": splat } = useParams();
+  const navigate = useNavigate();
 
-  // When a user clicks "View Status" on a procurement row, navigate to the tracker
+  // Parse the sub-path from the splat: e.g. "tracker/PR-001" or "tab/procurements"
+  const parts = (splat ?? "").split("/").filter(Boolean);
+  const subSection = parts[0] ?? "dashboard";   // e.g. "tracker", "details", "tab"
+  const subId      = parts[1] ?? null;           // e.g. procurement ID
+
+  // Derive activeKey for rendering
+  // URL patterns:
+  //   /dashboard/:role                     → dashboard overview
+  //   /dashboard/:role/tab/:tabKey         → a named tab (procurements, payments…)
+  //   /dashboard/:role/tracker/:id         → procurement status tracker
+  //   /dashboard/:role/details/:id         → procurement details sheet
+  let activeKey: string;
+  let selectedProcurementId: string | null = null;
+
+  if (subSection === "tracker" && subId) {
+    activeKey = "status-tracker";
+    selectedProcurementId = subId;
+  } else if (subSection === "details" && subId) {
+    activeKey = "procurement-details";
+    selectedProcurementId = subId;
+  } else if (subSection === "tab" && subId) {
+    // /tab/:tabKey — subId holds the real tab name
+    activeKey = subId;
+  } else if (!subSection || subSection === "dashboard") {
+    activeKey = "dashboard";
+  } else {
+    // Bare key directly in URL (fallback)
+    activeKey = subSection;
+  }
+
+  const navigateTo = (key: string) => {
+    navigate(`/dashboard/${role.toLowerCase()}/tab/${key}`, { replace: false });
+  };
+
   const handleViewProcurement = (id: string) => {
-    setSelectedProcurementId(id);
-    setActiveKey("status-tracker");
+    navigate(`/dashboard/${role.toLowerCase()}/tracker/${id}`);
   };
 
-  // When a user clicks "View Details" from action panels, navigate to the simple details sheet
   const handleViewProcurementDetails = (id: string) => {
-    setSelectedProcurementId(id);
-    setActiveKey("procurement-details");
+    navigate(`/dashboard/${role.toLowerCase()}/details/${id}`);
   };
 
-  // When navigating away from tracker via sidebar, clear selected
   const handleNavigate = (key: string) => {
-    if (key !== "status-tracker" && key !== "procurement-details") setSelectedProcurementId(null);
-    setActiveKey(key);
+    if (key === "dashboard") {
+      navigate(`/dashboard/${role.toLowerCase()}`);
+    } else {
+      navigate(`/dashboard/${role.toLowerCase()}/tab/${key}`);
+    }
+  };
+
+  const handleBackFromTracker = () => {
+    navigate(`/dashboard/${role.toLowerCase()}/tab/procurements`);
+  };
+
+  const handleBackFromDetails = () => {
+    let returnTab = "dashboard";
+    if (role === "HOD") returnTab = "quality-report";
+    else if (role === "BUR" || role === "FBUR") returnTab = "fund-verification";
+    else if (role === "SDC") returnTab = "method";
+    else if (role === "TEC") returnTab = "evaluations";
+    else if (role === "TB") returnTab = "approvals";
+    else if (role === "STK") returnTab = "grn";
+    else if (role === "FIN") returnTab = "payments";
+    navigate(`/dashboard/${role.toLowerCase()}/tab/${returnTab}`);
   };
 
   const selectedProcurement = selectedProcurementId
@@ -124,7 +169,7 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
           {activeKey === "status-tracker" && selectedProcurement && (
             <ProcurementStatusTracker
               procurement={selectedProcurement}
-              onBack={() => { setActiveKey("procurements"); setSelectedProcurementId(null); }}
+              onBack={handleBackFromTracker}
             />
           )}
 
@@ -132,45 +177,34 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
           {activeKey === "procurement-details" && selectedProcurement && (
             <ProcurementDetails
               procurement={selectedProcurement}
-              onBack={() => {
-                setSelectedProcurementId(null);
-                // Return to corresponding role action tab
-                if (role === "HOD") setActiveKey("quality-report");
-                else if (role === "BUR" || role === "FBUR") setActiveKey("fund-verification");
-                else if (role === "SDC") setActiveKey("method");
-                else if (role === "TEC") setActiveKey("evaluations");
-                else if (role === "TB") setActiveKey("approvals");
-                else if (role === "STK") setActiveKey("grn");
-                else if (role === "FIN") setActiveKey("payments");
-                else setActiveKey("dashboard");
-              }}
+              onBack={handleBackFromDetails}
             />
           )}
 
           {/* ── Role-specific views ── */}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "HOD" && (
-            <HODDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <HODDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && (role === "BUR" || role === "FBUR") && (
-            <BursarDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <BursarDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "SDC" && (
-            <SDCDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <SDCDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "TEC" && (
-            <TECDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <TECDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "TB" && (
-            <TBDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <TBDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "STK" && (
-            <StorekeeperDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <StorekeeperDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "SUP" && (
-            <SupplierDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} />
+            <SupplierDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "FIN" && (
-            <FinanceDashboard user={user} activeTab={activeKey} onTabChange={setActiveKey} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
+            <FinanceDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />
           )}
         </main>
 

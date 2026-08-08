@@ -1,10 +1,6 @@
 import { Bell, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import type { UserContext } from "../types";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ContentHeader — top bar inside the content area (breadcrumb + actions)
-// Matches the reference design: ← → breadcrumb · right icons · Share button
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface ContentHeaderProps {
   user: UserContext;
@@ -142,9 +138,6 @@ export function ContentHeader({ user, pageTitle, pageSubtitle }: ContentHeaderPr
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Page header inside scrollable content (title + subtitle + actions)
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface PageTitleBarProps {
   title: string;

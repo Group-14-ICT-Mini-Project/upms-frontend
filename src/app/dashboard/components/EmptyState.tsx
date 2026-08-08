@@ -1,8 +1,5 @@
 import { Layers, Inbox, CheckCircle2 } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EmptyState — placeholder for stub / coming-soon panels
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface EmptyStateProps {
   title: string;

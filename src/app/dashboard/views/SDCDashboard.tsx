@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UserContext } from "../types";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
@@ -6,10 +7,6 @@ import { ProcurementTable } from "../components/ProcurementTable";
 import { EmptyState } from "../components/EmptyState";
 import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SDC Dashboard — Supplies Division Clerk
-// Tabs: Dashboard · Method Selection · Suppliers · Bidding · All Procurements
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SDCDashboardProps {
   user: UserContext;

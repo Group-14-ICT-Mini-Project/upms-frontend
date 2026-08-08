@@ -83,7 +83,7 @@ export function WelcomeScreen({
         >
           Streamlined University
           <br />
-          <span className="text-gold-dark">Procurement</span>
+          <span className="text-gold-dark">Procurement Process</span>
         </motion.h1>
 
         <motion.p

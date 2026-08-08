@@ -2,9 +2,6 @@ import type { Procurement } from "../types";
 import { StatusBadge } from "./StatusBadge";
 import { formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ActionQueueList — "Your action queue" section
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface ActionQueueListProps {
   items: Procurement[];

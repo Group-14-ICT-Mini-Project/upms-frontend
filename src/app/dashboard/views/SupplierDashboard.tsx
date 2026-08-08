@@ -6,10 +6,6 @@ import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
 import { MOCK_PROCUREMENTS, getProcurementsForRole, formatLKR } from "../data";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Supplier Dashboard — Bid Submission
-// Tabs: Dashboard · My Bids · Submit Bid
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SupplierDashboardProps {
   user: UserContext;

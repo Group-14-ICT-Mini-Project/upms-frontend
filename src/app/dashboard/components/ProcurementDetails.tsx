@@ -3,9 +3,6 @@ import type { Procurement } from "../types";
 import { formatLKR } from "../data";
 import { StatusBadge } from "./StatusBadge";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ProcurementDetails — Simple, clean view showing only requisition details
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface ProcurementDetailsProps {
   procurement: Procurement;

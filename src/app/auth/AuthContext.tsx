@@ -3,7 +3,6 @@ import type { Role, UserContext } from "../dashboard/types";
 import { ROLE_META } from "../dashboard/types";
 import * as authApi from "../api/auth";
 import {
-  getAuthToken,
   setAuthToken,
   setRefreshToken,
   clearAuthData,
@@ -61,9 +60,9 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Restore user from localStorage on mount (no /me endpoint needed)
+  // Restore the saved profile on refresh. Demo sessions intentionally have no
+  // access token, so requiring a token here would discard their selected role.
   const [user, setUser] = useState<UserContext | null>(() => {
-    if (!getAuthToken()) return null;
     return getStoredUser<UserContext>();
   });
   const [isLoading] = useState(false);

@@ -1,12 +1,57 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { UserContext } from "../dashboard/types";
+import { createContext, useContext, useMemo, useState } from "react";
+import type { Role, UserContext } from "../dashboard/types";
+import { ROLE_META } from "../dashboard/types";
 import * as authApi from "../api/auth";
-import { getAuthToken, setAuthToken } from "../api/client";
+import {
+  getAuthToken,
+  setAuthToken,
+  setRefreshToken,
+  clearAuthData,
+  getStoredUser,
+  setStoredUser,
+} from "../api/client";
 
+// ── Map backend role strings → frontend Role codes ────────────
+const BACKEND_TO_FRONTEND_ROLE: Record<string, Role> = {
+  HOD: "HOD",
+  BURSAR: "BUR",
+  FACULTY_BURSAR: "FBUR",
+  FACULTY_DEAN: "FBUR",
+  SUPPLIER_DIVISION_CLERK: "SDC",
+  TEC_MEMBER: "TEC",
+  TENDER_BOARD_MEMBER: "TB",
+  STORE_KEEPER: "STK",
+  BIDDER: "SUP",
+  FINANCE_DIVISION: "FIN",
+  PROCUREMENT_OFFICER: "SDC",
+  EVALUATOR: "TEC",
+  ADMIN: "BUR",
+};
+
+function mapBackendRole(backendRole: string): Role {
+  return BACKEND_TO_FRONTEND_ROLE[backendRole] ?? "HOD";
+}
+
+function buildUserContext(res: authApi.AuthResponse): UserContext {
+  const primaryBackendRole = res.roles[0] ?? "HOD";
+  const role = mapBackendRole(primaryBackendRole);
+  const meta = ROLE_META[role];
+
+  return {
+    role,
+    name: res.username,
+    title: meta.label,
+    faculty: undefined,
+    department: undefined,
+    avatarInitials: res.username.slice(0, 2).toUpperCase(),
+  };
+}
+
+// ── Context types ─────────────────────────────────────────────
 interface AuthContextValue {
   user: UserContext | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<UserContext>;
+  login: (username: string, password: string) => Promise<UserContext>;
   register: (payload: authApi.RegisterRequest) => Promise<void>;
   logout: () => void;
   setDemoUser: (user: UserContext) => void;
@@ -15,31 +60,32 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserContext | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(getAuthToken()));
-
-  useEffect(() => {
-    if (!getAuthToken()) return;
-    authApi.getCurrentUser()
-      .then(setUser)
-      .catch(() => setAuthToken(null))
-      .finally(() => setIsLoading(false));
-  }, []);
+  // Restore user from localStorage on mount (no /me endpoint needed)
+  const [user, setUser] = useState<UserContext | null>(() => {
+    if (!getAuthToken()) return null;
+    return getStoredUser<UserContext>();
+  });
+  const [isLoading] = useState(false);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
     isLoading,
-    async login(email, password) {
-      const response = await authApi.login({ email, password });
-      setAuthToken(response.token);
-      setUser(response.user);
-      return response.user;
+    async login(username, password) {
+      const response = await authApi.login({ username, password });
+      // Persist tokens
+      setAuthToken(response.accessToken);
+      setRefreshToken(response.refreshToken);
+      // Build & persist user context
+      const userCtx = buildUserContext(response);
+      setStoredUser(userCtx);
+      setUser(userCtx);
+      return userCtx;
     },
     async register(payload) {
       await authApi.register(payload);
     },
     logout() {
-      setAuthToken(null);
+      clearAuthData();
       setUser(null);
     },
     setDemoUser(nextUser) {

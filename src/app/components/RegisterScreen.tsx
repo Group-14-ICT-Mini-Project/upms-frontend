@@ -1,23 +1,27 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Mail, Lock, Eye, EyeOff, ChevronDown, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ChevronDown, ArrowRight, User } from "lucide-react";
 import usjLogo from "../../usj-logo.png";
 import { BackButton } from "./ui/BackButton";
 
 const ROLES = [
-  "Lecturer",
-  "Head of Department",
-  "Dean",
-  "Faculty Bursar",
-  "Bursar",
-  "Vice Chancellor",
-  "Registrar",
-  "Supplier Division Clerk",
+  { value: "HOD", label: "Head of Department" },
+  { value: "BURSAR", label: "Bursar" },
+  { value: "FACULTY_BURSAR", label: "Faculty Bursar" },
+  { value: "FACULTY_DEAN", label: "Faculty Dean" },
+  { value: "PROCUREMENT_OFFICER", label: "Procurement Officer" },
+  { value: "SUPPLIER_DIVISION_CLERK", label: "Supplier Division Clerk" },
+  { value: "TEC_MEMBER", label: "TEC Member" },
+  { value: "TENDER_BOARD_MEMBER", label: "Tender Board Member" },
+  { value: "STORE_KEEPER", label: "Storekeeper" },
+  { value: "BIDDER", label: "Supplier / Bidder" },
+  { value: "FINANCE_DIVISION", label: "Finance Division" },
 ];
 
 interface RegisterScreenProps {
   onBack: () => void;
   onRegister: (payload: {
+    username: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -29,6 +33,7 @@ interface RegisterScreenProps {
 
 export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreenProps) {
   const [form, setForm] = useState({
+    username: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -49,6 +54,7 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
 
   const validate = () => {
     const errs: Partial<typeof form> = {};
+    if (!form.username.trim()) errs.username = "Username is required";
     if (!form.firstName.trim()) errs.firstName = "Required";
     if (!form.lastName.trim()) errs.lastName = "Required";
     if (!form.email) errs.email = "Email is required";
@@ -231,6 +237,33 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
               </div>
             </div>
 
+            {/* Username field */}
+            <div>
+              <label className="block mb-1 text-maroon text-[0.78rem] font-semibold">
+                Username
+              </label>
+              <div className="relative">
+                <User
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+                />
+                <input
+                  type="text"
+                  value={form.username}
+                  onChange={set("username")}
+                  placeholder="Choose a username"
+                  className={`w-full pl-9 pr-3 py-2.5 rounded-lg outline-none border text-maroon text-sm ${
+                    errors.username ? "border-red-500 focus:border-red-500 bg-white" : "border-stone-200 focus:border-gold bg-white"
+                  }`}
+                />
+              </div>
+              {errors.username && (
+                <p className="mt-1 text-red-500 text-[0.72rem]">
+                  {errors.username}
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block mb-1 text-maroon text-[0.78rem] font-semibold">
                 Email
@@ -326,8 +359,8 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
                     Select your role…
                   </option>
                   {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                    <option key={r.value} value={r.value}>
+                      {r.label}
                     </option>
                   ))}
                 </select>

@@ -161,6 +161,7 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
           user={user}
           pageTitle={pageInfo.title}
           pageSubtitle={pageInfo.subtitle}
+          onNavigate={handleNavigate}
         />
 
         {/* Scrollable content area */}

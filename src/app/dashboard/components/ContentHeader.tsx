@@ -1,45 +1,44 @@
 import { useState } from "react";
-import { Bell, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Edit3, FileText, PackageCheck, UserRound } from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, FileText, PackageCheck } from "lucide-react";
 import type { UserContext } from "../types";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "../../components/ui/hover-card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 
 interface ContentHeaderProps {
   user: UserContext;
   pageTitle: string;
   pageSubtitle?: string;
-  onUpdateProfile: (changes: Pick<UserContext, "name" | "faculty" | "department">) => void;
+  onNavigate: (key: string) => void;
 }
 
-const notifications = [
-  { icon: ClipboardCheck, title: "Approval awaiting review", detail: "A procurement request needs your attention.", time: "10 min ago", color: "#2563EB" },
-  { icon: FileText, title: "Document received", detail: "A new procurement document was submitted.", time: "1 hour ago", color: "#7C3AED" },
-  { icon: PackageCheck, title: "Status updated", detail: "A procurement has moved to its next stage.", time: "Yesterday", color: "#059669" },
+const INITIAL_NOTIFICATIONS = [
+  { id: "approval-review", icon: ClipboardCheck, title: "Approval awaiting review", detail: "A procurement request needs your attention.", time: "10 min ago", color: "#2563EB", destination: "approvals", isRead: false },
+  { id: "document-received", icon: FileText, title: "Document received", detail: "A new procurement document was submitted.", time: "1 hour ago", color: "#7C3AED", destination: "procurements", isRead: false },
+  { id: "status-updated", icon: PackageCheck, title: "Status updated", detail: "A procurement has moved to its next stage.", time: "Yesterday", color: "#059669", destination: "dashboard", isRead: false },
 ];
+
+const ACTION_DESTINATION_BY_ROLE: Record<UserContext["role"], string> = {
+  HOD: "quality-report",
+  BUR: "fund-verification",
+  FBUR: "fund-verification",
+  SDC: "procurements",
+  TEC: "evaluations",
+  TB: "approvals",
+  STK: "grn",
+  SUP: "my-bids",
+  FIN: "payments",
+};
 
 const buttonStyle = {
   width: 32, height: 32, border: "1px solid #E5E7EB", borderRadius: 8, background: "#FAFAFA", color: "#6B7280", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" as const,
 };
 
-export function ContentHeader({ user, pageTitle, onUpdateProfile }: ContentHeaderProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(user.name);
-  const [faculty, setFaculty] = useState(user.faculty ?? "");
-  const [department, setDepartment] = useState(user.department ?? "");
+export function ContentHeader({ user, pageTitle, onNavigate }: ContentHeaderProps) {
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const unreadCount = notifications.filter(notification => !notification.isRead).length;
 
-  const openEditor = () => {
-    setName(user.name);
-    setFaculty(user.faculty ?? "");
-    setDepartment(user.department ?? "");
-    setIsEditing(true);
-  };
-
-  const saveProfile = (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmedName = name.trim();
-    if (!trimmedName) return;
-    onUpdateProfile({ name: trimmedName, faculty: faculty.trim() || undefined, department: department.trim() || undefined });
-    setIsEditing(false);
+  const handleNotificationClick = (id: string, destination: string) => {
+    setNotifications(current => current.map(notification => notification.id === id ? { ...notification, isRead: true } : notification));
+    onNavigate(id === "approval-review" ? ACTION_DESTINATION_BY_ROLE[user.role] : destination);
   };
 
   return (
@@ -58,13 +57,26 @@ export function ContentHeader({ user, pageTitle, onUpdateProfile }: ContentHeade
             <HoverCardTrigger asChild>
               <button aria-label="View notifications" style={buttonStyle}>
                 <Bell size={14} />
-                <span style={{ position: "absolute", top: 6, right: 6, width: 6, height: 6, borderRadius: "50%", background: "#EF4444", border: "1.5px solid white" }} />
+                {unreadCount > 0 && <span style={{ position: "absolute", top: 6, right: 6, width: 6, height: 6, borderRadius: "50%", background: "#EF4444", border: "1.5px solid white" }} />}
               </button>
             </HoverCardTrigger>
             <HoverCardContent align="end" sideOffset={8} style={{ width: 340, padding: 0, overflow: "hidden", border: "1px solid #E5E7EB", borderRadius: 10, background: "#FFFFFF", boxShadow: "0 12px 28px rgba(15, 23, 42, 0.14)", zIndex: 60 }}>
-              <div style={{ padding: "13px 14px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}><strong style={{ fontSize: 13, color: "#111827" }}>Notifications</strong><span style={{ fontSize: 11, color: "#2563EB", fontWeight: 700 }}>3 new</span></div>
-              {notifications.map(({ icon: Icon, title, detail, time, color }) => <div key={title} style={{ display: "flex", gap: 10, padding: "12px 14px", borderBottom: "1px solid #F8FAFC" }}><div style={{ width: 30, height: 30, borderRadius: 8, background: `${color}12`, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon size={14} color={color} /></div><div style={{ minWidth: 0 }}><div style={{ fontSize: 12, color: "#374151", fontWeight: 650 }}>{title}</div><div style={{ fontSize: 11, color: "#6B7280", marginTop: 2, lineHeight: 1.35 }}>{detail}</div><div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4 }}>{time}</div></div></div>)}
-              <button style={{ width: "100%", border: 0, background: "#FFFFFF", padding: "11px", fontSize: 11, fontWeight: 700, color: "#2563EB", cursor: "pointer" }}>View all notifications</button>
+              <div style={{ padding: "13px 14px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <strong style={{ fontSize: 13, color: "#111827" }}>Notifications</strong>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {unreadCount > 0 && <span style={{ fontSize: 11, color: "#2563EB", fontWeight: 700 }}>{unreadCount} new</span>}
+                  {notifications.length > 0 && <button onClick={() => setNotifications([])} style={{ padding: 0, border: 0, background: "transparent", color: "#6B7280", fontSize: 11, fontWeight: 650, cursor: "pointer" }}>Clear all</button>}
+                </div>
+              </div>
+              {notifications.length === 0 ? (
+                <div style={{ padding: "28px 14px", textAlign: "center", fontSize: 12, color: "#9CA3AF" }}>No notifications</div>
+              ) : notifications.map(({ id, icon: Icon, title, detail, time, color, destination, isRead }) => (
+                <button key={id} onClick={() => handleNotificationClick(id, destination)} style={{ display: "flex", width: "100%", gap: 10, padding: "12px 14px", border: 0, borderBottom: "1px solid #F8FAFC", textAlign: "left", background: isRead ? "#FFFFFF" : "#F8FAFF", cursor: "pointer" }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: `${color}12`, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon size={14} color={color} /></div>
+                  <div style={{ minWidth: 0, flex: 1 }}><div style={{ fontSize: 12, color: "#374151", fontWeight: isRead ? 600 : 750 }}>{title}</div><div style={{ fontSize: 11, color: "#6B7280", marginTop: 2, lineHeight: 1.35 }}>{detail}</div><div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4 }}>{time}</div></div>
+                  {!isRead && <span aria-label="Unread notification" style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB", marginTop: 5, flexShrink: 0 }} />}
+                </button>
+              ))}
             </HoverCardContent>
           </HoverCard>
 
@@ -74,39 +86,21 @@ export function ContentHeader({ user, pageTitle, onUpdateProfile }: ContentHeade
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #7A0C0C, #5C0808)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#F59E0B" }}>{user.avatarInitials}</div><ChevronDown size={12} color="#9CA3AF" />
               </button>
             </HoverCardTrigger>
-            <HoverCardContent align="end" sideOffset={8} style={{ width: 270, padding: 0, overflow: "hidden", border: "1px solid #E5E7EB", borderRadius: 10, background: "#FFFFFF", boxShadow: "0 12px 28px rgba(15, 23, 42, 0.14)", zIndex: 60 }}>
-              <div style={{ padding: 16, display: "flex", gap: 11, alignItems: "center" }}><div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg, #7A0C0C, #5C0808)", display: "grid", placeItems: "center", fontSize: 13, fontWeight: 800, color: "#F59E0B", flexShrink: 0 }}>{user.avatarInitials}</div><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 750, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</div><div style={{ fontSize: 11, color: "#6B7280", marginTop: 3 }}>{user.title}</div></div></div>
-              <div style={{ margin: "0 16px", borderTop: "1px solid #F1F5F9" }} />
-              <button onClick={openEditor} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "12px 16px", background: "#FFFFFF", border: 0, color: "#374151", fontSize: 12, fontWeight: 650, cursor: "pointer", textAlign: "left" }}><Edit3 size={14} color="#2563EB" /> Edit profile</button>
+            <HoverCardContent align="end" sideOffset={8} style={{ width: 280, padding: 16, border: "1px solid #E5E7EB", borderRadius: 10, background: "#FFFFFF", boxShadow: "0 12px 28px rgba(15, 23, 42, 0.14)", zIndex: 60 }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg, #7A0C0C, #5C0808)", display: "grid", placeItems: "center", fontSize: 14, fontWeight: 800, color: "#F59E0B", flexShrink: 0 }}>{user.avatarInitials}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 750, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</div>
+                  <div style={{ fontSize: 12, color: "#4B5563", marginTop: 5 }}>{user.title}</div>
+                </div>
+              </div>
             </HoverCardContent>
           </HoverCard>
         </div>
       </div>
 
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-md" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-          <DialogHeader><DialogTitle style={{ color: "#111827" }}>Edit profile</DialogTitle><DialogDescription>Update the details shown in your profile menu.</DialogDescription></DialogHeader>
-          <form onSubmit={saveProfile}>
-            <div style={{ display: "grid", gap: 14, marginTop: 4 }}>
-              <ProfileField label="Full name" value={name} onChange={setName} required />
-              <div><label style={labelStyle}>Role</label><div style={{ ...inputStyle, background: "#F9FAFB", color: "#6B7280", display: "flex", alignItems: "center" }}><UserRound size={14} style={{ marginRight: 8 }} />{user.title}</div></div>
-              <ProfileField label="Faculty" value={faculty} onChange={setFaculty} />
-              <ProfileField label="Department" value={department} onChange={setDepartment} />
-            </div>
-            <DialogFooter style={{ marginTop: 22 }}><button type="button" onClick={() => setIsEditing(false)} style={{ ...formButtonStyle, background: "#FFFFFF", border: "1px solid #D1D5DB", color: "#374151" }}>Cancel</button><button type="submit" style={{ ...formButtonStyle, background: "#7A0C0C", border: "1px solid #7A0C0C", color: "#FFFFFF" }}>Save changes</button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </>
   );
-}
-
-const labelStyle = { display: "block", marginBottom: 6, fontSize: 12, fontWeight: 650, color: "#374151" };
-const inputStyle = { width: "100%", height: 38, borderRadius: 7, border: "1px solid #D1D5DB", padding: "0 10px", fontSize: 13, boxSizing: "border-box" as const };
-const formButtonStyle = { borderRadius: 7, padding: "9px 13px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-
-function ProfileField({ label, value, onChange, required = false }: { label: string; value: string; onChange: (value: string) => void; required?: boolean }) {
-  return <div><label style={labelStyle}>{label}</label><input required={required} value={value} onChange={event => onChange(event.target.value)} style={inputStyle} /></div>;
 }
 
 interface PageTitleBarProps { title: string; subtitle?: string; actions?: React.ReactNode; }

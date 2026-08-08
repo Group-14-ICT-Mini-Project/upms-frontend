@@ -33,9 +33,10 @@ export interface NavTab {
 /** Nav tabs available per role */
 export const ROLE_NAV_TABS: Record<Role, NavTab[]> = {
   HOD: [
-    { key: "dashboard",       label: "Dashboard" },
-    { key: "new-requisition", label: "New Requisition" },
-    { key: "procurements",    label: "All Procurements" },
+    { key: "dashboard",        label: "Dashboard" },
+    { key: "new-requisition",  label: "New Requisition" },
+    { key: "stock-inquiry",    label: "Stock Inquiry" },
+    { key: "procurements",     label: "All Procurements" },
   ],
   BUR: [
     { key: "dashboard",        label: "Dashboard" },
@@ -249,6 +250,17 @@ export const WORKFLOW_STEPS: WorkflowStep[] = [
   },
 ];
 
+/** Requisition type (consumable vs capital) */
+export type RequisitionType = "Consumables" | "Capital Goods" | "—";
+
+/** Quality inspection item entry */
+export interface QualityCheckItem {
+  itemName: string;
+  quantity: number;
+  status: "Approved" | "Rejected" | "Pending";
+  notes?: string;
+}
+
 /** A single procurement record */
 export interface Procurement {
   id: string;           // e.g. "PR-2026-001"
@@ -267,6 +279,28 @@ export interface Procurement {
   grnNumber?: string;      // populated after GRN issued
   activityLog?: ProcurementActivityLog[];
   bids?: BidEntry[];
+  
+  // New fields for enhanced features
+  requisitionType?: RequisitionType;      // Consumables or Capital Goods
+  currentStockBalance?: number;           // HOD stock level
+  fundingSource?: string;                 // Operating Budget, Capital Grant, etc.
+  budgetAllocated?: number;               // Amount allocated in budget
+  budgetAvailable?: number;               // Available balance after allocation
+  biddingDocuments?: string[];            // Document IDs/names
+  documentApprovalStatus?: "Pending" | "Approved" | "Rejected";
+  documentApprovedBy?: string;            // Name of approver
+  biddingDeadline?: string;               // ISO date string
+  biddingMethod?: "Sealed Bid" | "Open Auction" | "Direct Purchase";
+  supplierDirectory?: Array<{ name: string; contact: string; registered: boolean }>;
+  annualPlanName?: string;                // APP reference
+  inventoryItems?: Array<{ name: string; quantity: number; unit: string }>;
+  invoiceNumber?: string;                 // Storekeeper invoice ref
+  invoiceAmount?: number;                 // Invoice amount
+  grnDocuments?: string[];                // GRN document files
+  qualityCheckItems?: QualityCheckItem[]; // Quality inspection details
+  qualityReportApproved?: boolean;
+  paymentVerificationStatus?: "Not Started" | "In Progress" | "Verified" | "Approved";
+  paymentProcessedAt?: string;            // ISO date string
 }
 
 /** Logged-in user context */

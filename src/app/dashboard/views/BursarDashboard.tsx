@@ -5,9 +5,11 @@ import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
+import { BudgetComparison } from "../components/BudgetComparison";
 import { PageTitleBar } from "../components/ContentHeader";
-import { formatLKR } from "../data";
-import { useProcurements } from "../ProcurementContext";
+import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
 
 
 interface BursarDashboardProps {
@@ -25,11 +27,21 @@ export function BursarDashboard({ user, activeTab, onTabChange, onViewProcuremen
 }
 
 function BursarOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const { getProcurementsForUser } = useProcurements();
-  const myProcurements = getProcurementsForUser(user);
-  const queue = myProcurements.filter(p => p.status === "Pending Fund Verification");
+  const { isLoading, data } = useDashboardData(user);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        <SkeletonActionQueue />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
   return (
-    <div style={{ padding: "28px 28px" }}>
+    <div style={{ padding: "28px 28px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow total={myProcurements.length} inQueue={queue.length} actionRequired={queue.length} completed={0} />
       <ActionQueueList items={queue} onViewAll={() => onTabChange("fund-verification")} onItemClick={() => onTabChange("fund-verification")} />
@@ -105,45 +117,106 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 
         {/* Right: verification form */}
         {selected ? (
-          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 14, padding: "24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-              <div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>{selected.title}</h3>
-                <p style={{ fontSize: 12, color: "#6B7280", margin: 0 }}>{selected.id} · {selected.faculty}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Header */}
+            <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 14, padding: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>{selected.title}</h3>
+                  <p style={{ fontSize: 12, color: "#6B7280", margin: 0 }}>{selected.id} · {selected.faculty} · {selected.department}</p>
+                </div>
+                <button
+                  onClick={() => onViewProcurementDetails(selected.id)}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "6px 14px",
+                    background: "#F3F4F6",
+                    color: "#374151",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: 7,
+                    cursor: "pointer",
+                  }}
+                >
+                  View Details
+                </button>
               </div>
-              <button
-                onClick={() => onViewProcurementDetails(selected.id)}
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: "6px 14px",
-                  background: "#F3F4F6",
-                  color: "#374151",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: 7,
-                  cursor: "pointer",
-                }}
-              >
-                View Details
-              </button>
             </div>
-            <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 8, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 12, color: "#92400E", fontWeight: 600 }}>Requested Amount</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#B45309" }}>{formatLKR(selected.value)}</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {/* Budget Comparison */}
+            <BudgetComparison
+              requested={selected.value}
+              allocated={availableFunds ? Number(availableFunds) : selected.value}
+              available={availableFunds ? Math.max(0, Number(availableFunds) - selected.value) : selected.value}
+            />
+
+            {/* Verification Form */}
+            <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 14, padding: "20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <h4 style={{ fontSize: 12, fontWeight: 700, color: "#111827", margin: 0 }}>Verification Details</h4>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Budget Code <span style={{ color: "#EF4444" }}>*</span></label>
                 <input value={budgetCode} onChange={e => setBudgetCode(e.target.value)} placeholder="e.g. BUDGET-2026-FAS" style={inputStyle} />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Available Funds (LKR) <span style={{ color: "#EF4444" }}>*</span></label>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Total Budget Allocated (LKR) <span style={{ color: "#EF4444" }}>*</span></label>
                 <input type="number" value={availableFunds} onChange={e => setAvailableFunds(e.target.value)} placeholder="e.g. 500000" style={inputStyle} />
               </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button onClick={handleReject} style={{ flex: 1, padding: "10px", background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Reject</button>
-              <button onClick={handleVerify} disabled={!budgetCode || !availableFunds} style={{ flex: 2, padding: "10px", background: !budgetCode || !availableFunds ? "#D1D5DB" : "#15803D", color: "#FFFFFF", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: !budgetCode || !availableFunds ? "not-allowed" : "pointer" }}>Verify Funds</button>
+
+              {availableFunds && Number(availableFunds) < selected.value && (
+                <div style={{
+                  padding: 12,
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  borderRadius: 8,
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "start",
+                }}>
+                  <div style={{ fontSize: 14, marginTop: 2 }}>⚠️</div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#DC2626" }}>Budget Shortfall</div>
+                    <div style={{ fontSize: 11, color: "#DC2626", marginTop: 2 }}>
+                      Allocated budget is less than the requested amount. Consider escalating to Main Bursar.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, paddingTop: 10, borderTop: "1px solid #E5E7EB" }}>
+                <button
+                  onClick={handleReject}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    background: "#FEF2F2",
+                    color: "#B91C1C",
+                    border: "1px solid #FECACA",
+                    borderRadius: 9,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={handleVerify}
+                  disabled={!budgetCode || !availableFunds}
+                  style={{
+                    flex: 2,
+                    padding: "10px",
+                    background: !budgetCode || !availableFunds ? "#D1D5DB" : "#15803D",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: 9,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: !budgetCode || !availableFunds ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Verify Funds
+                </button>
+              </div>
             </div>
           </div>
         ) : (

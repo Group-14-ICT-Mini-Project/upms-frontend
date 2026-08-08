@@ -4,8 +4,9 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatLKR } from "../data";
-import { useProcurements } from "../ProcurementContext";
+import { MOCK_PROCUREMENTS, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonTenderList } from "../components/SkeletonLoader";
 
 
 interface SupplierDashboardProps {
@@ -27,10 +28,21 @@ export function SupplierDashboard({ user, activeTab, onTabChange, onViewProcurem
 }
 
 function SupplierOverview({ user, onTabChange, onViewProcurement }: { user: UserContext; onTabChange: (k: string) => void; onViewProcurement: (id: string) => void }) {
-  const { getProcurementsForUser } = useProcurements();
-  const openTenders = getProcurementsForUser(user);
+  const { isLoading, data } = useDashboardData(user);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 32px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        <SkeletonTenderList rows={3} />
+      </div>
+    );
+  }
+
+  const openTenders = data!.procurements;
   return (
-    <div style={{ padding: "28px 32px" }}>
+    <div style={{ padding: "28px 32px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow total={openTenders.length} inQueue={myBids.length} actionRequired={openTenders.length} completed={0} />
 

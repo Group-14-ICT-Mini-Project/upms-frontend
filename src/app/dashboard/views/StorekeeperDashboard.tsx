@@ -4,8 +4,9 @@ import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
-import { formatLKR } from "../data";
-import { useProcurements } from "../ProcurementContext";
+import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue } from "../components/SkeletonLoader";
 
 
 interface StorekeeperDashboardProps {
@@ -23,11 +24,21 @@ export function StorekeeperDashboard({ user, activeTab, onTabChange, onViewProcu
 }
 
 function STKOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const { getProcurementsForUser } = useProcurements();
-  const myProcurements = getProcurementsForUser(user);
-  const queue = myProcurements.filter(p => p.status === "Awaiting Delivery");
+  const { isLoading, data } = useDashboardData(user);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 32px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        <SkeletonActionQueue />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
   return (
-    <div style={{ padding: "28px 32px" }}>
+    <div style={{ padding: "28px 32px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow total={myProcurements.length} inQueue={queue.length} actionRequired={queue.length} completed={2} />
       <ActionQueueList items={queue} onViewAll={() => onTabChange("grn")} onItemClick={() => onTabChange("grn")} />

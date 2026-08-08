@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft } from "lucide-react";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
-import type { Procurement, UserContext } from "../types";
+import { InventoryCard } from "../components/InventoryCard";
+import type { UserContext } from "../types";
 import { PageTitleBar } from "../components/ContentHeader";
 import { ActionQueueList } from "../components/ActionQueueList";
 import { ProcurementTable } from "../components/ProcurementTable";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatLKR } from "../data";
-import { useProcurements } from "../ProcurementContext";
+import { MOCK_PROCUREMENTS, getActionQueueForRole, getProcurementsForRole, formatLKR } from "../data";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonTable } from "../components/SkeletonLoader";
 
 
 interface HODDashboardProps {
@@ -21,6 +23,7 @@ interface HODDashboardProps {
 
 export function HODDashboard({ user, activeTab, onTabChange, onViewProcurement, onViewProcurementDetails }: HODDashboardProps) {
   if (activeTab === "new-requisition") return <NewRequisitionPanel onSubmit={() => onTabChange("dashboard")} onViewProcurement={onViewProcurement} user={user} />;
+  if (activeTab === "stock-inquiry")   return <StockInquiryPanel />;
   if (activeTab === "procurements")    return <AllProcurementsPanel onViewProcurement={onViewProcurement} user={user} />;
   if (activeTab === "quality-report")  return <QualityReportPanel onViewProcurementDetails={onViewProcurementDetails} user={user} />;
   return <HODOverview user={user} onTabChange={onTabChange} />;
@@ -29,13 +32,28 @@ export function HODDashboard({ user, activeTab, onTabChange, onViewProcurement, 
 
 
 function HODOverview({ user, onTabChange }: { user: UserContext; onTabChange: (k: string) => void }) {
-  const { getProcurementsForUser } = useProcurements();
-  const myProcurements = getProcurementsForUser(user);
-  const queue = myProcurements.filter(p => p.status === "Quality Report Required");
+  const { isLoading, data } = useDashboardData(user);
   const [search, setSearch] = useState("");
 
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 32px 40px", animation: "fadeIn 0.3s ease" }}>
+        <SkeletonWelcomeBanner />
+        <SkeletonStatCardRow />
+        {/* Button placeholder */}
+        <div
+          className="upms-skel"
+          style={{ width: 200, height: 40, borderRadius: 9, marginBottom: 24 }}
+        />
+        <SkeletonTable rows={6} />
+      </div>
+    );
+  }
+
+  const { queue, procurements: myProcurements } = data!;
+
   return (
-    <div style={{ padding: "28px 32px 40px" }}>
+    <div style={{ padding: "28px 32px 40px", animation: "fadeIn 0.4s ease" }}>
       {/* Welcome Banner */}
       <WelcomeBanner user={user} />
 
@@ -430,6 +448,9 @@ interface ReqForm {
   title: string;
   faculty: string;
   department: string;
+  requisitionType: "Consumables" | "Capital Goods";
+  stockBalance: string;
+  fundingSource: string;
   description: string;
   reason: string;
   quantity: string;
@@ -450,16 +471,19 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
   const [submitError, setSubmitError] = useState("");
   const [errors, setErrors]   = useState<Partial<Record<keyof ReqForm, string>>>({});
   const [form, setForm]       = useState<ReqForm>({
-    title:       "",
-    faculty:     user?.faculty ?? "",
-    department:  user?.department ?? "",
-    description: "",
-    reason:      "",
-    quantity:    "",
-    unit:        "units",
-    approxValue: "",
-    preparedBy:  hodName,
-    signature:   "",
+    title:            "",
+    faculty:          user?.faculty ?? "",
+    department:       user?.department ?? "",
+    requisitionType:  "Consumables",
+    stockBalance:     "",
+    fundingSource:    "Operating Budget",
+    description:      "",
+    reason:           "",
+    quantity:         "",
+    unit:             "units",
+    approxValue:      "",
+    preparedBy:       hodName,
+    signature:        "",
   });
 
   const set = (key: keyof ReqForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -623,7 +647,7 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
 
         {/* ── Step panels ── */}
         {step === 0 && (
-          <StepCard title="Basic Information" subtitle="Enter the requisition title, faculty and department">
+          <StepCard title="Basic Information" subtitle="Enter requisition details and verify current stock">
             <MField label="Requisition Title" error={errors.title} required>
               <input
                 value={form.title}
@@ -650,6 +674,33 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
                 />
               </MField>
             </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <MField label="Requisition Type" required>
+                <select value={form.requisitionType} onChange={set("requisitionType")} style={mInput(false)}>
+                  <option value="Consumables">Consumables (recurring supply)</option>
+                  <option value="Capital Goods">Capital Goods (equipment/asset)</option>
+                </select>
+              </MField>
+              <MField label="Current Stock Balance (Units)">
+                <input
+                  type="number"
+                  value={form.stockBalance}
+                  onChange={set("stockBalance")}
+                  placeholder="Enter current quantity available"
+                  style={mInput(false)}
+                />
+              </MField>
+            </div>
+
+            <MField label="Funding Source">
+              <select value={form.fundingSource} onChange={set("fundingSource")} style={mInput(false)}>
+                <option value="Operating Budget">Operating Budget</option>
+                <option value="Capital Grant">Capital Grant</option>
+                <option value="Research Fund">Research Fund</option>
+                <option value="Maintenance Budget">Maintenance Budget</option>
+              </select>
+            </MField>
           </StepCard>
         )}
 
@@ -1019,3 +1070,204 @@ function FormRow({ label, required, children }: { label: string; required?: bool
 }
 
 const inputStyle: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 13, color: "#111827", background: "#FFFFFF", outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
+
+function StockInquiryPanel() {
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+
+  // Mock central stock inventory
+  const mockInventory = [
+    { name: "Whiteboards (4x6ft)", quantity: 12, unit: "pcs", lastUpdated: "2026-02-20T08:00:00Z", location: "Central Store - Shelf B3" },
+    { name: "Markers (Black, Box)", quantity: 45, unit: "boxes", lastUpdated: "2026-02-20T08:00:00Z", location: "Central Store - Drawer D2" },
+    { name: "A4 Paper (80gsm)", quantity: 250, unit: "reams", lastUpdated: "2026-02-19T14:00:00Z", location: "Central Store - Shelf A1" },
+    { name: "Printer Toner (HP LaserJet)", quantity: 8, unit: "cartridges", lastUpdated: "2026-02-19T10:00:00Z", location: "IT Storage - Cabinet 1" },
+    { name: "Desk Lamps (LED)", quantity: 23, unit: "pcs", lastUpdated: "2026-02-18T16:00:00Z", location: "Facilities - Shelf F2" },
+    { name: "Microscope Slides", quantity: 500, unit: "boxes", lastUpdated: "2026-02-17T09:00:00Z", location: "Biology Lab - Storage 2" },
+    { name: "Petri Dishes (90mm)", quantity: 1200, unit: "pcs", lastUpdated: "2026-02-17T09:00:00Z", location: "Biology Lab - Cabinet A" },
+    { name: "Distilled Water (1L)", quantity: 30, unit: "bottles", lastUpdated: "2026-02-16T11:00:00Z", location: "Chemistry Lab - Shelf C3" },
+  ];
+
+  return (
+    <div style={{ padding: "28px 32px" }}>
+      <PageTitleBar
+        title="Stock Inquiry"
+        subtitle="Query real-time stock levels from Supply Division Central Store"
+      />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
+        {/* Left: Inventory Search */}
+        <div>
+          <InventoryCard items={mockInventory} onSelect={setSelectedItem} />
+        </div>
+
+        {/* Right: Selected Item Details */}
+        <div>
+          {selectedItem ? (
+            <div style={{
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              borderRadius: 12,
+              padding: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+                Item Details
+              </h3>
+
+              <div style={{
+                padding: 12,
+                background: "#F0FDF4",
+                border: "1px solid #BBF7D0",
+                borderRadius: 8,
+              }}>
+                <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Item Name</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
+                  {selectedItem.name}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{
+                  padding: 12,
+                  background: "#EFF6FF",
+                  border: "1px solid #BFDBFE",
+                  borderRadius: 8,
+                }}>
+                  <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Current Stock</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1D4ED8" }}>
+                    {selectedItem.quantity}
+                  </div>
+                </div>
+                <div style={{
+                  padding: 12,
+                  background: "#FFF7ED",
+                  border: "1px solid #FED7AA",
+                  borderRadius: 8,
+                }}>
+                  <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Unit</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#C2410C" }}>
+                    {selectedItem.unit}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                padding: 12,
+                background: "#F5F3FF",
+                border: "1px solid #DDD6FE",
+                borderRadius: 8,
+              }}>
+                <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Location</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#6D28D9" }}>
+                  {selectedItem.location}
+                </div>
+              </div>
+
+              <div style={{
+                padding: 12,
+                background: "#FAFAFA",
+                border: "1px solid #E5E7EB",
+                borderRadius: 8,
+              }}>
+                <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4 }}>Last Updated</div>
+                <div style={{ fontSize: 12, color: "#111827" }}>
+                  {new Date(selectedItem.lastUpdated).toLocaleString()}
+                </div>
+              </div>
+
+              {selectedItem.quantity < 10 && (
+                <div style={{
+                  padding: 12,
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  borderRadius: 8,
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "start",
+                }}>
+                  <div style={{ fontSize: 14, marginTop: 2 }}>⚠️</div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#DC2626" }}>
+                      Low Stock Alert
+                    </div>
+                    <div style={{ fontSize: 11, color: "#DC2626", marginTop: 2 }}>
+                      Current quantity is below safe reorder level. Consider placing a procurement request.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{
+                display: "flex",
+                gap: 10,
+                paddingTop: 12,
+                borderTop: "1px solid #E5E7EB",
+              }}>
+                <button style={{
+                  flex: 1,
+                  padding: "9px 16px",
+                  background: "#7A0C0C",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}>
+                  Place Request
+                </button>
+                <button style={{
+                  flex: 1,
+                  padding: "9px 16px",
+                  background: "#F3F4F6",
+                  color: "#374151",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}>
+                  Export Details
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              borderRadius: 12,
+              padding: 24,
+              textAlign: "center",
+              color: "#9CA3AF",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 300,
+            }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>📋</div>
+              <p style={{ fontSize: 12, margin: 0 }}>Select an item to view detailed stock information</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Info section */}
+      <div style={{
+        marginTop: 20,
+        padding: 14,
+        background: "#EFF6FF",
+        border: "1px solid #BFDBFE",
+        borderRadius: 8,
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#1D4ED8", marginBottom: 4 }}>
+          ℹ️ How to use Stock Inquiry
+        </div>
+        <div style={{ fontSize: 11, color: "#1D4ED8" }}>
+          Search for items in the left panel to check current stock levels. Use this information to verify item availability before submitting a purchase requisition. Contact Supply Division directly if you need items not listed here.
+        </div>
+      </div>
+    </div>
+  );
+}

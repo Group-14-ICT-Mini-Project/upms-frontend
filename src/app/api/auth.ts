@@ -26,6 +26,8 @@ export interface AuthResponse {
   userId: number;
   username: string;
   email: string;
+  faculty?: string;
+  department?: string;
   roles: string[];
   lastLogin: string | null;
 }

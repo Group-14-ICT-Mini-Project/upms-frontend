@@ -51,6 +51,7 @@ export interface UpdateProcurementRequest {
   grnNumber?: string;
   invoiceNumber?: string;
   invoiceAmount?: number;
+  rejectionReason?: string;
 }
 
 export interface SubmitBidRequest {
@@ -90,11 +91,14 @@ interface BackendProcurementResponse {
   grnNumber?: string;
   invoiceNumber?: string;
   invoiceAmount?: number;
+  rejectionReason?: string;
 }
 
 interface PageResponse<T> {
   content?: T[];
 }
+
+type ListResponse<T> = PageResponse<T> | T[];
 
 async function procurementRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
@@ -141,7 +145,7 @@ function mapStatus(status?: string): ProcurementStatus {
   if (normalized === "EVALUATED") return "Authority Approval";
   if (normalized === "AWARDED" || normalized === "PURCHASE_ORDER_ISSUED") return "Purchase Order Issued";
   if (normalized === "COMPLETED") return "Completed";
-  if (normalized === "CANCELLED") return "Rejected";
+  if (normalized === "REJECTED" || normalized === "CANCELLED") return "Rejected";
   return status as ProcurementStatus;
 }
 
@@ -176,6 +180,7 @@ function mapProcurement(response: BackendProcurementResponse): Procurement {
     grnNumber: response.grnNumber,
     invoiceNumber: response.invoiceNumber,
     invoiceAmount: response.invoiceAmount,
+    rejectionReason: response.rejectionReason,
     openingDate: response.openingDate,
     closingDate: response.closingDate,
     documentFee: response.documentFee,
@@ -194,8 +199,8 @@ function mapProcurement(response: BackendProcurementResponse): Procurement {
 }
 
 export function listProcurements() {
-  return procurementRequest<PageResponse<BackendProcurementResponse>>("/v1/procurement/list?page=0&size=100")
-    .then(page => (page.content ?? []).map(mapProcurement));
+  return procurementRequest<ListResponse<BackendProcurementResponse>>("/v1/procurement/list?page=0&size=100")
+    .then(response => (Array.isArray(response) ? response : response.content ?? []).map(mapProcurement));
 }
 
 export function getProcurement(id: string) {

@@ -101,6 +101,8 @@ function toWorkflowOverride(procurement: Procurement): Partial<Procurement> {
     grnNumber: procurement.grnNumber,
     invoiceNumber: procurement.invoiceNumber,
     invoiceAmount: procurement.invoiceAmount,
+    rejectionReason: procurement.rejectionReason,
+    notes: procurement.notes,
     updatedAt: procurement.updatedAt,
     activityLog: procurement.activityLog,
   };

@@ -300,22 +300,24 @@ export function formatLKR(value?: number | null): string {
 /** Filter procurements visible to a given role/user */
 export function filterProcurementsForRole(procurements: Procurement[], user: UserContext): Procurement[] {
   const { role, faculty, department } = user;
+  const sameText = (left?: string, right?: string) =>
+    (left ?? "").trim().toLowerCase() === (right ?? "").trim().toLowerCase();
 
   if (role === "HOD") {
-    if (!faculty && !department) return procurements;
-    // HOD only sees procurements submitted from their department & faculty
+    if (!faculty || !department) return [];
+    // HOD only sees procurements submitted from their own department in their own faculty.
     return procurements.filter(p =>
-      (!faculty || p.faculty === faculty) && (!department || p.department === department)
+      sameText(p.faculty, faculty) && sameText(p.department, department)
     );
   }
 
-  if (role === "BUR" || role === "FBUR") {
-    // If faculty is specified on the user, they are a Faculty Bursar
-    // Otherwise they are the Main Bursar and see everything
-    if (faculty) {
-      return procurements.filter(p => p.faculty === faculty);
-    }
+  if (role === "BUR") {
     return procurements;
+  }
+
+  if (role === "FBUR") {
+    if (!faculty) return [];
+    return procurements.filter(p => sameText(p.faculty, faculty));
   }
 
   if (role === "SUP") {

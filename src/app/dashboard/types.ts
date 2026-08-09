@@ -37,6 +37,7 @@ export const ROLE_NAV_TABS: Record<Role, NavTab[]> = {
     { key: "new-requisition",  label: "New Requisition" },
     { key: "stock-inquiry",    label: "Stock Inquiry" },
     { key: "procurements",     label: "All Procurements" },
+    { key: "rejected",         label: "Rejected" },
   ],
   BUR: [
     { key: "dashboard",        label: "Dashboard" },
@@ -273,6 +274,8 @@ export interface Procurement {
   updatedAt: string;    // ISO date string
   submittedBy?: string;
   description?: string;
+  notes?: string;
+  rejectionReason?: string;
   supplierName?: string;   // populated after PO issued
   poNumber?: string;       // populated after PO issued
   budgetCode?: string;     // populated after fund verification

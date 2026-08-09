@@ -40,8 +40,8 @@ function buildUserContext(res: authApi.AuthResponse): UserContext {
     role,
     name: res.username,
     title: meta.label,
-    faculty: undefined,
-    department: undefined,
+    faculty: res.faculty,
+    department: res.department,
     avatarInitials: res.username.slice(0, 2).toUpperCase(),
   };
 }

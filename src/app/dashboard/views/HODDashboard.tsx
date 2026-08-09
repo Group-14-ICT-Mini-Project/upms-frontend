@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft } from "lucide-react";
+import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft, AlertCircle, XCircle } from "lucide-react";
 import { SignaturePad, SignaturePadRef } from "@/components/SignaturePad";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
@@ -27,6 +27,7 @@ export function HODDashboard({ user, activeTab, onTabChange, onViewProcurement, 
   if (activeTab === "new-requisition") return <NewRequisitionPanel onSubmit={() => onTabChange("dashboard")} onViewProcurement={onViewProcurement} user={user} />;
   if (activeTab === "stock-inquiry")   return <StockInquiryPanel />;
   if (activeTab === "procurements")    return <AllProcurementsPanel onViewProcurement={onViewProcurement} user={user} />;
+  if (activeTab === "rejected")        return <RejectedPanel onViewProcurementDetails={onViewProcurementDetails} user={user} />;
   if (activeTab === "quality-report")  return <QualityReportPanel onViewProcurementDetails={onViewProcurementDetails} user={user} />;
   return <HODOverview user={user} onTabChange={onTabChange} />;
 }
@@ -1156,6 +1157,121 @@ function AllProcurementsPanel({ onViewProcurement, user }: { onViewProcurement: 
       <div style={{ background: "#FFFFFF", borderRadius: 14, border: "1px solid #F1F5F9", overflow: "hidden" }}>
         <ProcurementTable procurements={list} title="" subtitle="" onViewProcurement={onViewProcurement} />
       </div>
+    </div>
+  );
+}
+
+function getRejectionReason(procurement: Procurement) {
+  if (procurement.rejectionReason?.trim()) return procurement.rejectionReason.trim();
+  const latestRejectionLog = [...(procurement.activityLog ?? [])]
+    .reverse()
+    .find(log => /reject/i.test(log.action) || /reject/i.test(log.notes ?? ""));
+  const source = latestRejectionLog?.notes || latestRejectionLog?.action || procurement.notes || "";
+  const match = source.match(/Reason:\s*(.+)$/i);
+  return (match?.[1] || source || "No rejection reason was recorded.").trim();
+}
+
+function RejectedPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
+  const { getProcurementsForUser, isLoading } = useProcurements();
+  const rejected = getProcurementsForUser(user).filter(procurement => procurement.status === "Rejected");
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px" }}>
+        <PageTitleBar title="Rejected Requests" subtitle="Loading rejected procurement records" />
+        <SkeletonTable rows={4} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "28px 28px" }}>
+      <PageTitleBar title="Rejected Requests" subtitle={`${rejected.length} rejected procurement request${rejected.length === 1 ? "" : "s"}`} />
+
+      <div style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        padding: "14px 16px",
+        background: "#FFFBEB",
+        border: "1px solid #FDE68A",
+        borderRadius: 10,
+        marginBottom: 18,
+        color: "#92400E",
+      }}>
+        <AlertCircle size={18} strokeWidth={2.4} style={{ marginTop: 1, flexShrink: 0 }} />
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 3 }}>Review rejection details before creating a new request</div>
+          <div style={{ fontSize: 12, lineHeight: 1.5 }}>Use the reason from the Bursar or approving authority to revise budget details, funding source, or item justification before resubmission.</div>
+        </div>
+      </div>
+
+      {rejected.length === 0 ? (
+        <div style={{
+          background: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          borderRadius: 14,
+          padding: "48px 24px",
+          textAlign: "center",
+          color: "#15803D",
+        }}>
+          <Check size={28} strokeWidth={2.5} />
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: "12px 0 4px" }}>No rejected requests</h3>
+          <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>Rejected procurements for your faculty or department will appear here.</p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+          {rejected.map(procurement => (
+            <div key={procurement.id} style={{
+              background: "#FFFFFF",
+              border: "1px solid #FECACA",
+              borderRadius: 14,
+              padding: 18,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#2563EB", fontFamily: "monospace", marginBottom: 3 }}>{procurement.id}</div>
+                  <h3 style={{ fontSize: 15, fontWeight: 800, color: "#111827", margin: 0 }}>{procurement.title}</h3>
+                  <p style={{ fontSize: 12, color: "#6B7280", margin: "4px 0 0" }}>{procurement.faculty}{procurement.department ? ` - ${procurement.department}` : ""}</p>
+                </div>
+                <StatusBadge status="Rejected" size="sm" />
+              </div>
+
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#B45309", marginBottom: 12 }}>{formatLKR(procurement.value)}</div>
+
+              <div style={{
+                background: "#FEF2F2",
+                border: "1px solid #FECACA",
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 14,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, fontWeight: 800, color: "#B91C1C", marginBottom: 5 }}>
+                  <XCircle size={14} /> Rejection Reason
+                </div>
+                <p style={{ fontSize: 12, color: "#7F1D1D", lineHeight: 1.5, margin: 0 }}>{getRejectionReason(procurement)}</p>
+              </div>
+
+              <button
+                onClick={() => onViewProcurementDetails(procurement.id)}
+                style={{
+                  padding: "9px 14px",
+                  background: "#F3F4F6",
+                  color: "#374151",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                View Details
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

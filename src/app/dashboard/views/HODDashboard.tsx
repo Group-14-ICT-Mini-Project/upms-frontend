@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft, AlertCircle, XCircle } from "lucide-react";
 import { SignaturePad, SignaturePadRef } from "@/components/SignaturePad";
 import { WelcomeBanner } from "../components/WelcomeBanner";
@@ -494,6 +494,16 @@ function toBackendDateTime(value: string) {
   return value.length === 16 ? `${value}:00` : value;
 }
 
+function formatOrgValue(value?: string) {
+  if (!value) return "";
+  return value
+    .replace(/^FACULTY_OF_/, "Faculty of ")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, char => char.toUpperCase())
+    .replace(/^Faculty Of /, "Faculty of ");
+}
+
 function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: () => void; onViewProcurement: (id: string) => void; user?: { name?: string; title?: string; department?: string; faculty?: string } }) {
   const { createRequisition } = useProcurements();
   const hodName = user?.name ?? "Dr. Nimal Perera";
@@ -509,8 +519,8 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
   const defaultClosingDate = toDateTimeLocal(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000));
   const [form, setForm]       = useState<ReqForm>({
     title:            "",
-    faculty:          user?.faculty || "Faculty of Applied Sciences",
-    department:       user?.department || "Computer Science",
+    faculty:          user?.faculty ?? "",
+    department:       user?.department ?? "",
     requisitionType:  "Consumables",
     stockBalance:     "",
     fundingSource:    "Operating Budget",
@@ -530,6 +540,15 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
     signature:        "",
   });
 
+  useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      faculty: user?.faculty ?? "",
+      department: user?.department ?? "",
+      preparedBy: user?.name ?? prev.preparedBy,
+    }));
+  }, [user?.faculty, user?.department, user?.name]);
+
   const set = (key: keyof ReqForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [key]: e.target.value }));
 
@@ -538,7 +557,8 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
     const e: Partial<Record<keyof ReqForm, string>> = {};
     if (s === 0) {
       if (!form.title.trim())    e.title    = "Requisition title is required.";
-      if (!form.faculty.trim())  e.faculty  = "Please select a faculty.";
+      if (!form.faculty.trim())  e.faculty  = "Your faculty is missing from your user profile.";
+      if (!form.department.trim()) e.department = "Your department is missing from your user profile.";
       if (form.stockBalance.trim() && (isNaN(Number(form.stockBalance)) || Number(form.stockBalance) < 0))
         e.stockBalance = "Enter a valid stock balance.";
       if (!form.fundingSource.trim()) e.fundingSource = "Funding source is required.";
@@ -752,18 +772,18 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
               />
             </MField>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <MField label="Faculty">
+              <MField label="Faculty" error={errors.faculty}>
                 <input
-                  value={form.faculty}
+                  value={formatOrgValue(form.faculty)}
                   readOnly
-                  style={{ ...mInput(false), background: "#F9FAFB", color: "#6B7280", cursor: "default" }}
+                  style={{ ...mInput(!!errors.faculty), background: "#F9FAFB", color: "#6B7280", cursor: "default" }}
                 />
               </MField>
-              <MField label="Department">
+              <MField label="Department" error={errors.department}>
                 <input
-                  value={form.department}
+                  value={formatOrgValue(form.department)}
                   readOnly
-                  style={{ ...mInput(false), background: "#F9FAFB", color: "#6B7280", cursor: "default" }}
+                  style={{ ...mInput(!!errors.department), background: "#F9FAFB", color: "#6B7280", cursor: "default" }}
                 />
               </MField>
             </div>
@@ -954,11 +974,11 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
               marginBottom: 20,
             }}>
               <ReviewRow label="Requisition Title"      value={form.title} />
-              <ReviewRow label="Faculty"                value={form.faculty} />
+              <ReviewRow label="Faculty"                value={formatOrgValue(form.faculty)} />
               <ReviewRow label="Requisition Type"       value={form.requisitionType} />
               <ReviewRow label="Current Stock Balance"  value={form.stockBalance || "Not recorded"} />
               <ReviewRow label="Funding Source"         value={form.fundingSource} />
-              <ReviewRow label="Department"             value={form.department || "—"} />
+              <ReviewRow label="Department"             value={formatOrgValue(form.department) || "—"} />
               <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: 12 }} />
               <ReviewRow label="Description"            value={form.description} multiline />
               <ReviewRow label="Reason for Requisition" value={form.reason} multiline />
@@ -1229,13 +1249,10 @@ function RejectedPanel({ onViewProcurementDetails, user }: { onViewProcurementDe
               padding: 18,
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#2563EB", fontFamily: "monospace", marginBottom: 3 }}>{procurement.id}</div>
-                  <h3 style={{ fontSize: 15, fontWeight: 800, color: "#111827", margin: 0 }}>{procurement.title}</h3>
-                  <p style={{ fontSize: 12, color: "#6B7280", margin: "4px 0 0" }}>{procurement.faculty}{procurement.department ? ` - ${procurement.department}` : ""}</p>
-                </div>
-                <StatusBadge status="Rejected" size="sm" />
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#2563EB", fontFamily: "monospace", marginBottom: 3 }}>{procurement.id}</div>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: "#111827", margin: 0 }}>{procurement.title}</h3>
+                <p style={{ fontSize: 12, color: "#6B7280", margin: "4px 0 0" }}>{procurement.faculty}{procurement.department ? ` - ${procurement.department}` : ""}</p>
               </div>
 
               <div style={{ fontSize: 18, fontWeight: 800, color: "#B45309", marginBottom: 12 }}>{formatLKR(procurement.value)}</div>

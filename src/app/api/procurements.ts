@@ -134,6 +134,8 @@ function mapStatus(status?: string): ProcurementStatus {
   if (!status) return "Pending Fund Verification";
   const normalized = status.toUpperCase().replace(/\s+/g, "_");
   if (normalized === "DRAFT") return "Pending Fund Verification";
+  if (normalized === "FUNDS_VERIFIED") return "Funds Verified";
+  if (normalized === "BIDDING_PREP") return "Bidding Prep";
   if (normalized === "PUBLISHED") return "Bidding Open";
   if (normalized === "CLOSED" || normalized === "UNDER_EVALUATION") return "Technical Evaluation";
   if (normalized === "EVALUATED") return "Authority Approval";

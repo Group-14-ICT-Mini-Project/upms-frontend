@@ -29,6 +29,8 @@ export default function App() {
 
 function WelcomeRoute() {
   const nav = useNavigate();
+  const auth = useAuth();
+  if (auth.user) return <Navigate to={dashboardPath(auth.user.role)} replace />;
   return (
     <WelcomeScreen
       onLogin={() => nav("/login")}
@@ -40,6 +42,7 @@ function WelcomeRoute() {
 function LoginRoute() {
   const nav = useNavigate();
   const auth = useAuth();
+  if (auth.user) return <Navigate to={dashboardPath(auth.user.role)} replace />;
   return (
     <LoginScreen
       onBack={() => nav("/")}
@@ -55,6 +58,7 @@ function LoginRoute() {
 function RegisterRoute() {
   const nav = useNavigate();
   const auth = useAuth();
+  if (auth.user) return <Navigate to={dashboardPath(auth.user.role)} replace />;
   return (
     <RegisterScreen
       onBack={() => nav("/")}
@@ -80,6 +84,7 @@ function WaitingRoute() {
 function RolePickerRoute() {
   const nav = useNavigate();
   const auth = useAuth();
+  if (auth.user) return <Navigate to={dashboardPath(auth.user.role)} replace />;
   return <RolePicker onSelect={(role) => {
     auth.setDemoUser(DEMO_USERS[role]);
     nav(`/dashboard/${role.toLowerCase()}`);
@@ -88,9 +93,13 @@ function RolePickerRoute() {
 
 function DashboardRoute() {
   const nav = useNavigate();
+  const auth = useAuth();
   const { role: roleParam } = useParams<{ role: string }>();
   const roleSlug = (roleParam ?? "").toUpperCase() as Role;
   const validRoles: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
+  if (auth.user && auth.user.role !== roleSlug) {
+    return <Navigate to={dashboardPath(auth.user.role)} replace />;
+  }
   if (!validRoles.includes(roleSlug)) {
     return <Navigate to="/select-role" replace />;
   }
@@ -100,6 +109,10 @@ function DashboardRoute() {
       onLogout={() => nav("/login")}
     />
   );
+}
+
+function dashboardPath(role: Role) {
+  return `/dashboard/${role.toLowerCase()}`;
 }
 
 

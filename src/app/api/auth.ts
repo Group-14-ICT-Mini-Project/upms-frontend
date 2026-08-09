@@ -13,6 +13,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   role: string;
+  faculty?: string;
+  department?: string;
 }
 
 // ── Response shape (matches actual backend) ───────────────────

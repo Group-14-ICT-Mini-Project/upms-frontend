@@ -58,7 +58,9 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
   const { getProcurementsForUser, updateProcurement } = useProcurements();
   const { addNotification } = useNotifications();
   const myProcurements = getProcurementsForUser(user);
-  const pending = myProcurements.filter(p => p.status === "Pending Fund Verification");
+  const pending = myProcurements.filter(p =>
+    p.status === "Pending Fund Verification" && (user.role !== "BUR" || p.value >= 500_000)
+  );
   const [selected, setSelected] = useState<Procurement | null>(pending[0] ?? null);
   const [budgetCode, setBudgetCode] = useState("");
   const [budgetAllocated, setBudgetAllocated] = useState("");

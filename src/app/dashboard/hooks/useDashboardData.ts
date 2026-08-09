@@ -37,5 +37,9 @@ function getActionQueueForUser(user: UserContext, procurements: Procurement[]) {
     FIN: ["Payment Pending"],
   };
 
-  return procurements.filter(item => statusesByRole[user.role].includes(item.status));
+  return procurements.filter(item => {
+    if (!statusesByRole[user.role].includes(item.status)) return false;
+    if (user.role === "BUR") return item.value >= 500_000;
+    return true;
+  });
 }

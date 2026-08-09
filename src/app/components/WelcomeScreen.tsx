@@ -67,7 +67,7 @@ export function WelcomeScreen({
           className="text-center"
         >
           <div className="text-xs tracking-[0.2em] uppercase mb-5 text-gold-dark font-semibold">
-            Procurement Management System
+            Streamlined University Procument Process
           </div>
         </motion.div>
 
@@ -81,9 +81,9 @@ export function WelcomeScreen({
           }}
           className="text-center text-maroon-dark text-[clamp(2.4rem,5.5vw,4.5rem)] font-bold tracking-tight leading-[1.05] max-w-[900px]"
         >
-          Streamlined University
+          Procument Management System
           <br />
-          <span className="text-gold-dark">Procurement Process</span>
+          <span className="text-gold-dark">University of Sri Jayewardenepura</span>
         </motion.h1>
 
         <motion.p

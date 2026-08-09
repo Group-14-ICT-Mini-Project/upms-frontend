@@ -289,11 +289,12 @@ export const MOCK_PROCUREMENTS: Procurement[] = [
 ];
 
 /** Helper: format LKR value */
-export function formatLKR(value: number): string {
+export function formatLKR(value?: number | null): string {
+  if (value == null || isNaN(value)) return "LKR 0";
   if (value >= 1_000_000) {
     return `LKR ${(value / 1_000_000).toFixed(1)}M`;
   }
-  return `LKR ${value.toLocaleString("en-LK")}`;
+  return `LKR ${Number(value).toLocaleString("en-LK")}`;
 }
 
 /** Filter procurements visible to a given role/user */
@@ -332,11 +333,14 @@ export function filterProcurementsForRole(procurements: Procurement[], user: Use
  * -1 means the status is unknown / rejected.
  * 10 means "Completed" (all steps done).
  */
-export function getStepIndexForStatus(status: ProcurementStatus): number {
+export function getStepIndexForStatus(status?: ProcurementStatus | string): number {
+  if (!status) return 0;
   if (status === "Completed") return 10;
   if (status === "Rejected")  return -1;
+  if (status === "Under Evaluation" || status === "Technical Evaluation") return 4;
+  if (status === "Submitted") return 3;
   for (const step of WORKFLOW_STEPS) {
-    if (step.mapToStatuses.includes(status)) return step.index;
+    if (step.mapToStatuses.includes(status as ProcurementStatus)) return step.index;
   }
   return 0;
 }

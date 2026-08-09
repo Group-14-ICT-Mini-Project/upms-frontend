@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { Component, useEffect, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router";
-import type { Role, UserContext } from "./types";
+import type { Procurement, Role, UserContext } from "./types";
 import { Sidebar } from "./components/Sidebar";
 import { ContentHeader } from "./components/ContentHeader";
 import { HODDashboard } from "./views/HODDashboard";
@@ -15,7 +15,36 @@ import { ProcurementStatusTracker } from "./components/ProcurementStatusTracker"
 import { ProcurementDetails } from "./components/ProcurementDetails";
 import { useProcurements } from "./ProcurementContext";
 import { useAuth } from "../auth/AuthContext";
+import { getProcurement } from "../api/procurements";
+import { MOCK_PROCUREMENTS } from "./data";
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class SectionErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown, errorInfo: unknown) {
+    console.error("Dashboard view render error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 const DEMO_USERS: Record<Role, UserContext> = {
   HOD:  { role: "HOD",  name: "Dr. Nimal Perera",          title: "Head of Department",      faculty: "Faculty of Applied Sciences", department: "Computer Science",  avatarInitials: "NP" },
@@ -57,6 +86,8 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
   const auth = useAuth();
   const { procurements } = useProcurements();
+  const [loadedProcurement, setLoadedProcurement] = useState<Procurement | null>(null);
+  const [selectedLoadError, setSelectedLoadError] = useState("");
   const user = auth.user?.role === role ? auth.user : DEMO_USERS[role];
   const { "*": splat } = useParams();
   const navigate = useNavigate();
@@ -66,12 +97,6 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
   const subSection = parts[0] ?? "dashboard";   // e.g. "tracker", "details", "tab"
   const subId      = parts[1] ?? null;           // e.g. procurement ID
 
-  // Derive activeKey for rendering
-  // URL patterns:
-  //   /dashboard/:role                     → dashboard overview
-  //   /dashboard/:role/tab/:tabKey         → a named tab (procurements, payments…)
-  //   /dashboard/:role/tracker/:id         → procurement status tracker
-  //   /dashboard/:role/details/:id         → procurement details sheet
   let activeKey: string;
   let selectedProcurementId: string | null = null;
 
@@ -82,12 +107,10 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
     activeKey = "procurement-details";
     selectedProcurementId = subId;
   } else if (subSection === "tab" && subId) {
-    // /tab/:tabKey — subId holds the real tab name
     activeKey = subId;
   } else if (!subSection || subSection === "dashboard") {
     activeKey = "dashboard";
   } else {
-    // Bare key directly in URL (fallback)
     activeKey = subSection;
   }
 
@@ -127,11 +150,76 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
     navigate(`/dashboard/${role.toLowerCase()}/tab/${returnTab}`);
   };
 
-  const selectedProcurement = selectedProcurementId
+  const selectedFromList = selectedProcurementId
     ? procurements.find(p => p.id === selectedProcurementId) ?? null
     : null;
+  const selectedFromMock = selectedProcurementId
+    ? MOCK_PROCUREMENTS.find(p => p.id === selectedProcurementId) ?? null
+    : null;
+  const selectedProcurement = selectedFromList ?? loadedProcurement ?? selectedFromMock;
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    setSelectedLoadError("");
+    setLoadedProcurement(null);
+
+    if (!selectedProcurementId || selectedFromList || selectedFromMock) {
+      return () => {
+        isCurrent = false;
+      };
+    }
+
+    getProcurement(selectedProcurementId)
+      .then(procurement => {
+        if (isCurrent) setLoadedProcurement(procurement);
+      })
+      .catch(err => {
+        if (isCurrent) {
+          setSelectedLoadError(err instanceof Error ? err.message : "Unable to load procurement status");
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedProcurementId, selectedFromList, selectedFromMock]);
 
   const pageInfo = PAGE_TITLES[activeKey] ?? { title: activeKey, subtitle: "" };
+
+  const renderFallbackCard = (
+    <div style={{ padding: "32px", maxWidth: 720 }}>
+      <button
+        onClick={activeKey === "status-tracker" ? handleBackFromTracker : handleBackFromDetails}
+        style={{
+          background: "none",
+          border: "none",
+          color: "#6B7280",
+          cursor: "pointer",
+          fontSize: 13,
+          fontWeight: 700,
+          padding: 0,
+          marginBottom: 18,
+        }}
+      >
+        ← Back to previous screen
+      </button>
+      <div style={{
+        background: "#FFFFFF",
+        border: "1px solid #E5E7EB",
+        borderRadius: 12,
+        padding: "28px 32px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+      }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: "0 0 8px" }}>
+          {selectedLoadError || !selectedProcurement ? "Procurement not found" : "Unable to display tracker"}
+        </h2>
+        <p style={{ fontSize: 13, color: "#6B7280", margin: 0, lineHeight: 1.6 }}>
+          {selectedLoadError || `The procurement record ${selectedProcurementId ?? ""} could not be found or loaded.`}
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -173,19 +261,27 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
           }}
         >
           {/* ── Procurement Status Tracker (shared across all roles) ── */}
-          {activeKey === "status-tracker" && selectedProcurement && (
-            <ProcurementStatusTracker
-              procurement={selectedProcurement}
-              onBack={handleBackFromTracker}
-            />
+          {activeKey === "status-tracker" && (
+            selectedProcurement ? (
+              <SectionErrorBoundary fallback={renderFallbackCard}>
+                <ProcurementStatusTracker
+                  procurement={selectedProcurement}
+                  onBack={handleBackFromTracker}
+                />
+              </SectionErrorBoundary>
+            ) : renderFallbackCard
           )}
 
           {/* ── Procurement Details Sheet (shared across all roles) ── */}
-          {activeKey === "procurement-details" && selectedProcurement && (
-            <ProcurementDetails
-              procurement={selectedProcurement}
-              onBack={handleBackFromDetails}
-            />
+          {activeKey === "procurement-details" && (
+            selectedProcurement ? (
+              <SectionErrorBoundary fallback={renderFallbackCard}>
+                <ProcurementDetails
+                  procurement={selectedProcurement}
+                  onBack={handleBackFromDetails}
+                />
+              </SectionErrorBoundary>
+            ) : renderFallbackCard
           )}
 
           {/* ── Role-specific views ── */}

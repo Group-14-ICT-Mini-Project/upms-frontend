@@ -390,19 +390,34 @@ function InfoField({ label, value, mono }: { label: string; value: string | unde
 }
 
 function ProcurementInfoGrid({ procurement }: { procurement: Procurement }) {
+  const formatDateTime = (value?: string) => {
+    if (!value) return undefined;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
+  };
+
   const rows: { label: string; value: string | undefined; mono?: boolean }[] = [
     { label: "Requisition ID",  value: procurement.id, mono: true },
     { label: "Item Description", value: procurement.description },
     { label: "Faculty",          value: procurement.faculty },
     { label: "Department",       value: procurement.department },
+    { label: "Requisition Type", value: procurement.requisitionType },
+    { label: "Current Stock Balance", value: procurement.currentStockBalance?.toLocaleString("en-LK") },
+    { label: "Funding Source",   value: procurement.fundingSource },
     { label: "Submitted By",     value: procurement.submittedBy },
     { label: "Estimated Value",  value: formatLKR(procurement.value) },
+    { label: "Opening Date",     value: formatDateTime(procurement.openingDate) },
+    { label: "Closing Date",     value: formatDateTime(procurement.closingDate) },
+    { label: "Document Fee",     value: procurement.documentFee !== undefined ? formatLKR(procurement.documentFee) : undefined },
+    { label: "Bid Bond",         value: procurement.requiresBidBond ? `${procurement.bidBondPercentage ?? 0}% required` : "Not required" },
     { label: "Procurement Method", value: procurement.method !== "—" ? procurement.method : undefined },
     { label: "Budget Code",      value: procurement.budgetCode, mono: true },
     { label: "Supplier",         value: procurement.supplierName },
     { label: "Purchase Order",   value: procurement.poNumber, mono: true },
     { label: "GRN Number",       value: procurement.grnNumber, mono: true },
-    { label: "Last Updated",     value: new Date(procurement.updatedAt).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" }) },
+    { label: "Invoice Number",   value: procurement.invoiceNumber, mono: true },
+    { label: "Invoice Amount",   value: procurement.invoiceAmount !== undefined ? formatLKR(procurement.invoiceAmount) : undefined },
+    { label: "Last Updated",     value: formatDateTime(procurement.updatedAt) },
   ].filter(r => !!r.value);
 
   return (
@@ -430,6 +445,12 @@ function ProcurementInfoGrid({ procurement }: { procurement: Procurement }) {
 function BiddersSection({ procurement, activeStepIndex }: { procurement: Procurement; activeStepIndex: number }) {
   const bids = procurement.bids ?? [];
   const showScores = activeStepIndex >= 4; // TEC evaluation and beyond
+
+  const formatDateSafe = (value?: string) => {
+    if (!value) return "—";
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toLocaleDateString("en-LK", { day: "2-digit", month: "short", year: "numeric" });
+  };
 
   return (
     <div style={{
@@ -491,7 +512,7 @@ function BiddersSection({ procurement, activeStepIndex }: { procurement: Procure
                 </td>
                 <td style={{ padding: "12px 16px" }}>
                   <span style={{ fontSize: 12, color: "#6B7280" }}>
-                    {new Date(bid.submittedAt).toLocaleDateString("en-LK", { day: "2-digit", month: "short", year: "numeric" })}
+                    {formatDateSafe(bid.submittedAt)}
                   </span>
                 </td>
                 {showScores && (
@@ -564,6 +585,12 @@ const ROLE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
 function ActivityTimeline({ procurement }: { procurement: Procurement }) {
   const logs = [...(procurement.activityLog ?? [])].reverse(); // newest first
 
+  const formatLogTime = (value?: string) => {
+    if (!value) return "";
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
+  };
+
   return (
     <div style={{
       background: "#FFFFFF",
@@ -591,7 +618,7 @@ function ActivityTimeline({ procurement }: { procurement: Procurement }) {
             const isLast = i === logs.length - 1;
 
             return (
-              <div key={log.id} style={{ display: "flex", gap: 14, paddingBottom: isLast ? 16 : 0 }}>
+              <div key={log.id || i} style={{ display: "flex", gap: 14, paddingBottom: isLast ? 16 : 0 }}>
                 {/* Timeline line + dot */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                   <div style={{
@@ -647,7 +674,7 @@ function ActivityTimeline({ procurement }: { procurement: Procurement }) {
 
                   {/* Timestamp */}
                   <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                    {new Date(log.timestamp).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}
+                    {formatLogTime(log.timestamp)}
                   </span>
                 </div>
               </div>

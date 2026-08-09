@@ -4,6 +4,68 @@ import { Mail, Lock, Eye, EyeOff, ChevronDown, ArrowRight, User } from "lucide-r
 import usjLogo from "../../usj-logo.png";
 import { BackButton } from "./ui/BackButton";
 
+const FACULTIES = [
+  {
+    value: "FACULTY_OF_TECHNOLOGY",
+    label: "Faculty of Technology",
+    departments: [
+      "Department of Information Communication Technology",
+      "Department of Engineering Technology",
+      "Department of Biosystem Technology",
+      "Department of Science for Technology",
+    ],
+  },
+  {
+    value: "FACULTY_OF_MANAGEMENT_STUDIES_AND_COMMERCE",
+    label: "Faculty of Management Studies and Commerce",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_APPLIED_SCIENCES",
+    label: "Faculty of Applied Sciences",
+    departments: [
+      "Department of Computer Science",
+      "Department of Mathematics",
+      "Department of Physics",
+    ],
+  },
+  {
+    value: "FACULTY_OF_MEDICAL_SCIENCES",
+    label: "Faculty of Medical Sciences",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_ENGINEERING",
+    label: "Faculty of Engineering",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_ALLIED_HEALTH_SCIENCES",
+    label: "Faculty of Allied Health Sciences",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_DENTAL_SCIENCES",
+    label: "Faculty of Dental Sciences",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_URBAN_AQUATIC_AND_BIORESOURCES",
+    label: "Faculty of Urban Aquatic and Bioresources",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_COMPUTING",
+    label: "Faculty of Computing",
+    departments: [],
+  },
+  {
+    value: "FACULTY_OF_HUMANITIES_AND_SOCIAL_SCIENCES",
+    label: "Faculty of Humanities and Social Sciences",
+    departments: [],
+  },
+];
+
 const ROLES = [
   { value: "HOD", label: "Head of Department" },
   { value: "BURSAR", label: "Bursar" },
@@ -27,6 +89,8 @@ interface RegisterScreenProps {
     email: string;
     password: string;
     role: string;
+    faculty: string;
+    department: string;
   }) => Promise<void>;
   onGoLogin: () => void;
 }
@@ -39,6 +103,8 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
     email: "",
     password: "",
     role: "",
+    faculty: "",
+    department: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +114,15 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
   const set =
     (field: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((p) => ({ ...p, [field]: e.target.value }));
+      const nextValue = e.target.value;
+      setForm((p) => {
+        const nextState = { ...p, [field]: nextValue };
+        if (field === "role") {
+          nextState.faculty = "";
+          nextState.department = "";
+        }
+        return nextState;
+      });
       setErrors((p) => ({ ...p, [field]: undefined }));
     };
 
@@ -62,6 +136,13 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
     if (!form.password) errs.password = "Password is required";
     else if (form.password.length < 8) errs.password = "At least 8 characters";
     if (!form.role) errs.role = "Please select your role";
+    if (form.role === "HOD") {
+      if (!form.faculty) errs.faculty = "Please select your faculty";
+      if (!form.department) errs.department = "Please select your department";
+    }
+    if (form.role === "FACULTY_BURSAR" || form.role === "FACULTY_DEAN") {
+      if (!form.faculty) errs.faculty = "Please select your faculty";
+    }
     return errs;
   };
 
@@ -375,6 +456,84 @@ export function RegisterScreen({ onBack, onRegister, onGoLogin }: RegisterScreen
                 </p>
               )}
             </div>
+
+            {(form.role === "HOD" || form.role === "FACULTY_BURSAR" || form.role === "FACULTY_DEAN") && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block mb-1 text-maroon text-[0.78rem] font-semibold">
+                    {form.role === "HOD" ? "Faculty" : "Faculty"}
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={form.faculty}
+                      onChange={(e) => {
+                        setForm((p) => ({ ...p, faculty: e.target.value, department: "" }));
+                        setErrors((p) => ({ ...p, faculty: undefined, department: undefined }));
+                      }}
+                      className={`w-full px-3 py-2.5 rounded-lg outline-none border text-sm appearance-none cursor-pointer ${
+                        errors.faculty ? "border-red-500 focus:border-red-500 bg-white" : "border-stone-200 focus:border-gold bg-white"
+                      } ${form.faculty ? "text-maroon" : "text-stone-400"}`}
+                    >
+                      <option value="" disabled>
+                        Select your faculty…
+                      </option>
+                      {FACULTIES.map((faculty) => (
+                        <option key={faculty.value} value={faculty.value}>
+                          {faculty.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400"
+                    />
+                  </div>
+                  {errors.faculty && (
+                    <p className="mt-1 text-red-500 text-[0.72rem]">
+                      {errors.faculty}
+                    </p>
+                  )}
+                </div>
+
+                {form.role === "HOD" && (
+                  <div>
+                    <label className="block mb-1 text-maroon text-[0.78rem] font-semibold">
+                      Department
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={form.department}
+                        onChange={(e) => {
+                          setForm((p) => ({ ...p, department: e.target.value }));
+                          setErrors((p) => ({ ...p, department: undefined }));
+                        }}
+                        className={`w-full px-3 py-2.5 rounded-lg outline-none border text-sm appearance-none cursor-pointer ${
+                          errors.department ? "border-red-500 focus:border-red-500 bg-white" : "border-stone-200 focus:border-gold bg-white"
+                        } ${form.department ? "text-maroon" : "text-stone-400"}`}
+                      >
+                        <option value="" disabled>
+                          Select your department…
+                        </option>
+                        {FACULTIES.find((faculty) => faculty.value === form.faculty)?.departments.map((department) => (
+                          <option key={department} value={department}>
+                            {department}
+                          </option>
+                        )) ?? []}
+                      </select>
+                      <ChevronDown
+                        size={15}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400"
+                      />
+                    </div>
+                    {errors.department && (
+                      <p className="mt-1 text-red-500 text-[0.72rem]">
+                        {errors.department}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"

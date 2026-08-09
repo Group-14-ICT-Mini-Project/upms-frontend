@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft } from "lucide-react";
+import { Plus, TrendingUp, MoreHorizontal, ArrowUpRight, Search, Filter, Building2, ArrowRight, Check, ChevronLeft, XCircle, AlertCircle } from "lucide-react";
 import { SignaturePad, SignaturePadRef } from "@/components/SignaturePad";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { StatCardRow } from "../components/StatCard";
@@ -28,6 +28,7 @@ export function HODDashboard({ user, activeTab, onTabChange, onViewProcurement, 
   if (activeTab === "stock-inquiry")   return <StockInquiryPanel />;
   if (activeTab === "procurements")    return <AllProcurementsPanel onViewProcurement={onViewProcurement} user={user} />;
   if (activeTab === "quality-report")  return <QualityReportPanel onViewProcurementDetails={onViewProcurementDetails} user={user} />;
+  if (activeTab === "rejected")        return <RejectedPanel onViewProcurement={onViewProcurement} user={user} />;
   return <HODOverview user={user} onTabChange={onTabChange} />;
 }
 
@@ -1424,6 +1425,166 @@ function StockInquiryPanel() {
           Search for items in the left panel to check current stock levels. Use this information to verify item availability before submitting a purchase requisition. Contact Supply Division directly if you need items not listed here.
         </div>
       </div>
+    </div>
+  );
+}
+
+function RejectedPanel({ onViewProcurement, user }: { onViewProcurement: (id: string) => void; user: UserContext }) {
+  const { getProcurementsForUser, isLoading } = useProcurements();
+  const list = getProcurementsForUser(user);
+  const rejected = list.filter(p => p.status === "Rejected");
+
+  function extractRejectionReason(notes?: string): string {
+    if (!notes) return "No reason provided.";
+    const match = notes.match(/Reason:\s*(.+)/s);
+    return match ? match[1].trim() : notes;
+  }
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: "28px 28px" }}>
+        <PageTitleBar title="Rejected Requests" subtitle="Loading rejected procurements" />
+        <SkeletonTable rows={4} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "28px 28px", animation: "fadeIn 0.4s ease" }}>
+      <PageTitleBar
+        title="Rejected Requests"
+        subtitle={`${rejected.length} procurement${rejected.length !== 1 ? "s" : ""} rejected by Bursar`}
+      />
+
+      {rejected.length === 0 ? (
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 14,
+            border: "1px solid #F1F5F9",
+            padding: "60px 32px",
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F0FDF4", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Check size={22} strokeWidth={2.5} color="#15803D" />
+          </div>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>No Rejected Requests</h3>
+          <p style={{ fontSize: 13, color: "#6B7280", margin: 0 }}>All your procurement requests are currently in progress or approved.</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "12px 16px",
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: 10,
+            fontSize: 12,
+            color: "#B91C1C",
+            fontWeight: 600,
+          }}>
+            <AlertCircle size={15} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+            These requisitions were rejected by the Bursar during fund verification. Review the reason and resubmit if applicable.
+          </div>
+
+          {rejected.map(pr => (
+            <div
+              key={pr.id}
+              style={{
+                background: "#FFFFFF",
+                border: "1.5px solid #FECACA",
+                borderRadius: 14,
+                padding: "20px 24px",
+                boxShadow: "0 1px 4px rgba(185,28,28,0.06)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: "#FEF2F2",
+                    border: "1px solid #FECACA",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    <XCircle size={20} strokeWidth={2} color="#DC2626" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", fontFamily: "monospace", marginBottom: 2 }}>{pr.id}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 2 }}>{pr.title}</div>
+                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>{pr.faculty}{pr.department ? ` · ${pr.department}` : ""} · {formatLKR(pr.value)}</div>
+                  </div>
+                </div>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: "#FEE2E2",
+                  color: "#B91C1C",
+                  border: "1px solid #FECACA",
+                  whiteSpace: "nowrap" as const,
+                }}>
+                  Rejected by Bursar
+                </span>
+              </div>
+
+              <div style={{
+                background: "#FFF5F5",
+                border: "1px solid #FECACA",
+                borderRadius: 10,
+                padding: "14px 16px",
+                marginBottom: 14,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6 }}>Rejection Reason</div>
+                <p style={{ fontSize: 13, color: "#7F1D1D", margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
+                  {extractRejectionReason(pr.notes)}
+                </p>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12, borderTop: "1px solid #FEE2E2" }}>
+                <span style={{ fontSize: 11, color: "#9CA3AF" }}>
+                  Last updated: {new Date(pr.updatedAt).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}
+                </span>
+                <button
+                  onClick={() => onViewProcurement(pr.id)}
+                  style={{
+                    padding: "7px 16px",
+                    background: "#7A0C0C",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#9B1515")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "#7A0C0C")}
+                >
+                  View Details <ArrowRight size={12} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

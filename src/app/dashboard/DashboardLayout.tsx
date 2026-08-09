@@ -67,6 +67,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "procurement-details": { title: "Procurement Details",  subtitle: "Full specification and details of the requisition" },
   "quality-report":      { title: "Quality Reports",      subtitle: "Submit quality inspection reports" },
   "fund-verification":   { title: "Fund Verification",    subtitle: "Verify budget availability" },
+  "rejected":            { title: "Rejected Requests",   subtitle: "Procurements rejected by the Bursar" },
   "method":              { title: "Method Selection",     subtitle: "Select procurement method for verified requisitions" },
   "suppliers":           { title: "Suppliers",            subtitle: "Registered supplier directory" },
   "bidding":             { title: "Bidding",              subtitle: "Manage bid openings and supplier invitations" },

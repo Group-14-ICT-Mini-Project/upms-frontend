@@ -286,6 +286,37 @@ export const MOCK_PROCUREMENTS: Procurement[] = [
       { bidderName: "AirMaster Lanka", amount: 920000, submittedAt: "2026-02-13T16:00:00Z", technicalScore: 80, financialScore: 80 },
     ],
   },
+  {
+    id: "PR-2026-009",
+    title: "3D Printer for Engineering Lab",
+    faculty: "Faculty of Applied Sciences",
+    department: "Computer Science",
+    value: 680000,
+    method: "—",
+    status: "Rejected",
+    updatedAt: "2026-02-18T14:00:00Z",
+    submittedBy: "Dr. Nimal Perera",
+    description: "Industrial-grade FDM 3D printer for undergraduate engineering projects and prototyping.",
+    notes: "Fund verification rejected. Reason: Insufficient budget allocation in the 2026 Faculty Operating Budget. The requested amount of LKR 680,000 exceeds the remaining capital equipment balance of LKR 420,000. Please revise the request to fit within the available allocation, or seek supplementary funding approval from the Vice Chancellor's office before resubmitting.",
+    activityLog: [
+      {
+        id: "log-009-1",
+        stepIndex: 0,
+        actor: "Dr. Nimal Perera",
+        role: "HOD",
+        action: "Purchase requisition created for 3D printer for CS lab prototyping facility.",
+        timestamp: "2026-02-15T09:00:00Z",
+      },
+      {
+        id: "log-009-2",
+        stepIndex: 1,
+        actor: "Mr. Kamal Silva",
+        role: "BUR",
+        action: "Fund verification rejected. Reason: Insufficient budget allocation in the 2026 Faculty Operating Budget. The requested amount of LKR 680,000 exceeds the remaining capital equipment balance of LKR 420,000.",
+        timestamp: "2026-02-18T14:00:00Z",
+      },
+    ],
+  },
 ];
 
 /** Helper: format LKR value */

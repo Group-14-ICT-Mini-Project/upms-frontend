@@ -2,7 +2,7 @@ import {
   LayoutDashboard, FilePlus2, ClipboardList, FileCheck2,
   BadgeCheck, Sliders, Building2, Scale, ClipboardCheck,
   ShieldCheck, PackageCheck, FileText, Send, CreditCard,
-  LogOut, Search, X,
+  LogOut, Search, X, XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import usjLogo from "../../../usj-logo.png";
@@ -38,6 +38,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "ACTIONS",
       items: [
         { key: "quality-report", label: "Quality Reports", icon: FileCheck2 },
+        { key: "rejected",       label: "Rejected",        icon: XCircle },
       ],
     },
   ],
@@ -149,6 +150,7 @@ export function Sidebar({ user, activeKey, onNavigate, onSignOut }: SidebarProps
     "approvals": "Authority Approval",
     "grn": "Awaiting Delivery",
     "payments": "Payment Pending",
+    "rejected": "Rejected",
   };
   const actionCounts = Object.fromEntries(
     Object.entries(actionStatuses).map(([key, status]) => [

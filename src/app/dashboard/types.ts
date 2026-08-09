@@ -284,6 +284,11 @@ export interface Procurement {
   requisitionType?: RequisitionType;      // Consumables or Capital Goods
   currentStockBalance?: number;           // HOD stock level
   fundingSource?: string;                 // Operating Budget, Capital Grant, etc.
+  openingDate?: string;                   // Backend bidding opening date
+  closingDate?: string;                   // Backend bidding closing date
+  documentFee?: number;                   // RFQ/document fee
+  requiresBidBond?: boolean;              // Whether bid bond is required
+  bidBondPercentage?: number;             // Required bid bond percentage
   budgetAllocated?: number;               // Amount allocated in budget
   budgetAvailable?: number;               // Available balance after allocation
   biddingDocuments?: string[];            // Document IDs/names

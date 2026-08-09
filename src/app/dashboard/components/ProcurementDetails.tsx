@@ -13,19 +13,34 @@ export function ProcurementDetails({
   procurement,
   onBack,
 }: ProcurementDetailsProps) {
+  const formatDateTime = (value?: string) => {
+    if (!value) return "Not Set";
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
+  };
+
   const fields = [
     { label: "Requisition ID", value: procurement.id, isMono: true },
     { label: "Current Status", value: <StatusBadge status={procurement.status} size="sm" /> },
     { label: "Estimated Value", value: formatLKR(procurement.value), isGold: true },
     { label: "Procurement Method", value: procurement.method !== "—" ? procurement.method : "Not Assigned" },
     { label: "Faculty / Division", value: procurement.faculty },
+    { label: "Requisition Type", value: procurement.requisitionType ?? "Not Recorded" },
+    { label: "Current Stock Balance", value: procurement.currentStockBalance?.toLocaleString("en-LK") ?? "Not Recorded" },
+    { label: "Funding Source", value: procurement.fundingSource ?? "Not Recorded" },
+    { label: "Opening Date", value: formatDateTime(procurement.openingDate) },
+    { label: "Closing Date", value: formatDateTime(procurement.closingDate) },
+    { label: "Document Fee", value: procurement.documentFee !== undefined ? formatLKR(procurement.documentFee) : "Not Set" },
+    { label: "Bid Bond Required", value: procurement.requiresBidBond ? `${procurement.bidBondPercentage ?? 0}%` : "No" },
     { label: "Department / Unit", value: procurement.department ?? "—" },
     { label: "Budget Allocation Code", value: procurement.budgetCode ?? "Pending Allocation", isMono: true },
     { label: "Submitted By (HOD)", value: procurement.submittedBy ?? "—" },
     { label: "Selected Supplier", value: procurement.supplierName ?? "Not Selected Yet" },
     { label: "Purchase Order (PO)", value: procurement.poNumber ?? "Not Issued Yet", isMono: true },
     { label: "Goods Received Note (GRN)", value: procurement.grnNumber ?? "Not Received Yet", isMono: true },
-    { label: "Last System Update", value: new Date(procurement.updatedAt).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" }) },
+    { label: "Invoice Number", value: procurement.invoiceNumber ?? "Not Received Yet", isMono: true },
+    { label: "Invoice Amount", value: procurement.invoiceAmount !== undefined ? formatLKR(procurement.invoiceAmount) : "Not Received Yet", isGold: procurement.invoiceAmount !== undefined },
+    { label: "Last System Update", value: formatDateTime(procurement.updatedAt) },
   ];
 
   return (

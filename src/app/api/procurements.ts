@@ -1,5 +1,5 @@
 import type { BidEntry, Procurement, ProcurementMethod, ProcurementStatus } from "../dashboard/types";
-import { getAuthToken } from "./client";
+import { apiRequest, getAuthToken } from "./client";
 
 const PROCUREMENT_API_BASE_URL =
   import.meta.env.VITE_PROCUREMENT_API_BASE_URL ?? "https://upms-backend-37xy.onrender.com/api";
@@ -30,12 +30,27 @@ export interface CreateProcurementRequest {
 export interface UpdateProcurementRequest {
   status?: ProcurementStatus;
   method?: ProcurementMethod;
+  title?: string;
+  description?: string;
+  estimatedValue?: number;
+  openingDate?: string;
+  closingDate?: string;
+  documentFee?: number;
+  requiresBidBond?: boolean;
+  bidBondPercentage?: number;
+  faculty?: string;
+  department?: string;
+  requisitionType?: "Consumables" | "Capital Goods";
+  currentStockBalance?: number;
+  fundingSource?: string;
   budgetCode?: string;
   availableFunds?: number;
   notes?: string;
   poNumber?: string;
   supplierName?: string;
   grnNumber?: string;
+  invoiceNumber?: string;
+  invoiceAmount?: number;
 }
 
 export interface SubmitBidRequest {
@@ -119,10 +134,13 @@ function mapStatus(status?: string): ProcurementStatus {
   if (!status) return "Pending Fund Verification";
   const normalized = status.toUpperCase().replace(/\s+/g, "_");
   if (normalized === "DRAFT") return "Pending Fund Verification";
+  if (normalized === "FUNDS_VERIFIED") return "Funds Verified";
+  if (normalized === "BIDDING_PREP") return "Bidding Prep";
   if (normalized === "PUBLISHED") return "Bidding Open";
-  if (normalized === "CLOSED") return "Bid Evaluation";
+  if (normalized === "CLOSED" || normalized === "UNDER_EVALUATION") return "Technical Evaluation";
   if (normalized === "EVALUATED") return "Authority Approval";
-  if (normalized === "AWARDED") return "Purchase Order Issued";
+  if (normalized === "AWARDED" || normalized === "PURCHASE_ORDER_ISSUED") return "Purchase Order Issued";
+  if (normalized === "COMPLETED") return "Completed";
   if (normalized === "CANCELLED") return "Rejected";
   return status as ProcurementStatus;
 }
@@ -158,6 +176,11 @@ function mapProcurement(response: BackendProcurementResponse): Procurement {
     grnNumber: response.grnNumber,
     invoiceNumber: response.invoiceNumber,
     invoiceAmount: response.invoiceAmount,
+    openingDate: response.openingDate,
+    closingDate: response.closingDate,
+    documentFee: response.documentFee,
+    requiresBidBond: response.requiresBidBond,
+    bidBondPercentage: response.bidBondPercentage,
     biddingDeadline: response.closingDate,
     activityLog: [{
       id: `log-${response.id}`,

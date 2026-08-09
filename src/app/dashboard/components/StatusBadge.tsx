@@ -20,7 +20,7 @@ const STATUS_MAP: Partial<Record<ProcurementStatus, StatusConfig>> = {
   "Quality Report Required":   { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA", dot: "#F97316" },
   "Payment Pending":           { bg: "#FEF2F2", text: "#B91C1C", border: "#FECACA", dot: "#EF4444" },
   "Completed":                 { bg: "#F0FDF4", text: "#15803D", border: "#BBF7D0", dot: "#22C55E" },
-  "Rejected":                  { bg: "#FEF2F2", text: "#B91C1C", border: "#FECACA", dot: "#EF4444" },
+  "Rejected":                  { bg: "#FFF0F2", text: "#991B1B", border: "#FFCACA", dot: "#EF4444" },
 };
 
 const DEFAULT_CONFIG: StatusConfig = {
@@ -40,24 +40,25 @@ export function StatusBadge({ status, size = "sm" }: StatusBadgeProps) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: size === "sm" ? 6 : 8,
-        padding: size === "sm" ? "3px 10px" : "4px 12px",
-        borderRadius: 20,
-        fontSize: size === "sm" ? 11 : 12,
-        fontWeight: 600,
+        gap: size === "sm" ? 8 : 10,
+        padding: size === "sm" ? "5px 15px" : "7px 18px",
+        borderRadius: 9999,
+        fontSize: size === "sm" ? 13 : 14,
+        fontWeight: 700,
         background: cfg.bg,
         color: cfg.text,
         border: `1px solid ${cfg.border}`,
         whiteSpace: "nowrap",
         letterSpacing: "0.01em",
-        width: size === "sm" ? 180 : 195,
+        width: "fit-content",
         boxSizing: "border-box",
+        lineHeight: 1.2,
       }}
     >
       <span
         style={{
-          width: 6,
-          height: 6,
+          width: 7,
+          height: 7,
           borderRadius: "50%",
           background: cfg.dot,
           flexShrink: 0,

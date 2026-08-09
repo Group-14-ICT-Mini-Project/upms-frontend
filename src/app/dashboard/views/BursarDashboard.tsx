@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, X } from "lucide-react";
 import type { UserContext, Procurement } from "../types";
 import { WelcomeBanner } from "../components/WelcomeBanner";
@@ -68,6 +68,17 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  useEffect(() => {
+    if (!selected && pending.length > 0) {
+      setSelected(pending[0]);
+      return;
+    }
+
+    if (selected && !pending.some(pr => pr.id === selected.id)) {
+      setSelected(pending[0] ?? null);
+    }
+  }, [pending, selected]);
+
   const handleVerify = async () => {
     if (!selected) return;
     const allocatedAmount = Number(budgetAllocated);
@@ -91,6 +102,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
     if (!reason) return;
     await updateProcurement(selected.id, {
       status: "Rejected",
+      rejectionReason: reason,
       notes: `Fund verification rejected. Reason: ${reason}`,
     }, { name: user.name, role: user.role });
     addNotification({

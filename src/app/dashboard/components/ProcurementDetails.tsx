@@ -32,6 +32,7 @@ export function ProcurementDetails({
     { label: "Closing Date", value: formatDateTime(procurement.closingDate) },
     { label: "Document Fee", value: procurement.documentFee !== undefined ? formatLKR(procurement.documentFee) : "Not Set" },
     { label: "Bid Bond Required", value: procurement.requiresBidBond ? `${procurement.bidBondPercentage ?? 0}%` : "No" },
+    { label: "Rejection Reason", value: procurement.rejectionReason ?? procurement.notes ?? "Not Applicable" },
     { label: "Department / Unit", value: procurement.department ?? "—" },
     { label: "Budget Allocation Code", value: procurement.budgetCode ?? "Pending Allocation", isMono: true },
     { label: "Submitted By (HOD)", value: procurement.submittedBy ?? "—" },

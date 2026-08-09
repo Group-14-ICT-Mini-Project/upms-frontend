@@ -16,7 +16,6 @@ import { ProcurementDetails } from "./components/ProcurementDetails";
 import { useProcurements } from "./ProcurementContext";
 import { useAuth } from "../auth/AuthContext";
 import { getProcurement } from "../api/procurements";
-import { MOCK_PROCUREMENTS } from "./data";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -66,6 +65,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "status-tracker":      { title: "Procurement Tracker",  subtitle: "Step-by-step status and activity log" },
   "procurement-details": { title: "Procurement Details",  subtitle: "Full specification and details of the requisition" },
   "quality-report":      { title: "Quality Reports",      subtitle: "Submit quality inspection reports" },
+  "rejected":            { title: "Rejected Requests",    subtitle: "Review rejected procurements and reasons" },
   "fund-verification":   { title: "Fund Verification",    subtitle: "Verify budget availability" },
   "method":              { title: "Method Selection",     subtitle: "Select procurement method for verified requisitions" },
   "suppliers":           { title: "Suppliers",            subtitle: "Registered supplier directory" },
@@ -153,10 +153,7 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
   const selectedFromList = selectedProcurementId
     ? procurements.find(p => p.id === selectedProcurementId) ?? null
     : null;
-  const selectedFromMock = selectedProcurementId
-    ? MOCK_PROCUREMENTS.find(p => p.id === selectedProcurementId) ?? null
-    : null;
-  const selectedProcurement = selectedFromList ?? loadedProcurement ?? selectedFromMock;
+  const selectedProcurement = selectedFromList ?? loadedProcurement;
 
   useEffect(() => {
     let isCurrent = true;
@@ -164,7 +161,7 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
     setSelectedLoadError("");
     setLoadedProcurement(null);
 
-    if (!selectedProcurementId || selectedFromList || selectedFromMock) {
+    if (!selectedProcurementId || selectedFromList) {
       return () => {
         isCurrent = false;
       };
@@ -183,7 +180,7 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
     return () => {
       isCurrent = false;
     };
-  }, [selectedProcurementId, selectedFromList, selectedFromMock]);
+  }, [selectedProcurementId, selectedFromList]);
 
   const pageInfo = PAGE_TITLES[activeKey] ?? { title: activeKey, subtitle: "" };
 

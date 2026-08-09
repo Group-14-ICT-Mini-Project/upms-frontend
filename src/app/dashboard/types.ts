@@ -37,7 +37,6 @@ export const ROLE_NAV_TABS: Record<Role, NavTab[]> = {
     { key: "new-requisition",  label: "New Requisition" },
     { key: "stock-inquiry",    label: "Stock Inquiry" },
     { key: "procurements",     label: "All Procurements" },
-    { key: "rejected",         label: "Rejected" },
   ],
   BUR: [
     { key: "dashboard",        label: "Dashboard" },
@@ -274,14 +273,13 @@ export interface Procurement {
   updatedAt: string;    // ISO date string
   submittedBy?: string;
   description?: string;
-  notes?: string;           // workflow notes, e.g. rejection reason from Bursar
   supplierName?: string;   // populated after PO issued
   poNumber?: string;       // populated after PO issued
   budgetCode?: string;     // populated after fund verification
   grnNumber?: string;      // populated after GRN issued
   activityLog?: ProcurementActivityLog[];
   bids?: BidEntry[];
-
+  
   // New fields for enhanced features
   requisitionType?: RequisitionType;      // Consumables or Capital Goods
   currentStockBalance?: number;           // HOD stock level

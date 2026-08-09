@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { BidEntry, Procurement, Role, UserContext } from "./types";
-import { filterProcurementsForRole, MOCK_PROCUREMENTS } from "./data";
+import { filterProcurementsForRole } from "./data";
 import * as procurementApi from "../api/procurements";
 import { ApiError } from "../api/client";
 
@@ -107,7 +107,7 @@ function toWorkflowOverride(procurement: Procurement): Partial<Procurement> {
 }
 
 export function ProcurementProvider({ children }: { children: React.ReactNode }) {
-  const [procurements, setProcurements] = useState<Procurement[]>(() => applyWorkflowOverrides(MOCK_PROCUREMENTS));
+  const [procurements, setProcurements] = useState<Procurement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,14 +116,9 @@ export function ProcurementProvider({ children }: { children: React.ReactNode })
     setError(null);
     try {
       const data = await procurementApi.listProcurements();
-      if (data && data.length > 0) {
-        setProcurements(applyWorkflowOverrides(data));
-      } else {
-        setProcurements(applyWorkflowOverrides(MOCK_PROCUREMENTS));
-      }
+      setProcurements(applyWorkflowOverrides(data ?? []));
     } catch (err) {
-      // Fallback to mock procurements when backend server is unavailable
-      setProcurements(applyWorkflowOverrides(MOCK_PROCUREMENTS));
+      setProcurements([]);
       if (!(err instanceof ApiError && err.status === 401)) {
         setError(err instanceof Error ? err.message : "Failed to load procurements");
       }
@@ -145,45 +140,9 @@ export function ProcurementProvider({ children }: { children: React.ReactNode })
       return filterProcurementsForRole(procurements, user);
     },
     async createRequisition(payload) {
-      try {
-        const created = await procurementApi.createProcurement(payload);
-        setProcurements(current => mergeProcurement(current, created));
-        return created;
-      } catch {
-        // Fallback local creation when backend is offline
-        const localId = `PR-2026-${String(Math.floor(Math.random() * 900) + 100)}`;
-        const timestamp = new Date().toISOString();
-        const created: Procurement = {
-          id: localId,
-          title: payload.title,
-          faculty: payload.faculty,
-          department: payload.department,
-          value: payload.estimatedValue ?? 0,
-          method: payload.procurementMethodId ? "Shopping" : "—",
-          status: "Pending Fund Verification",
-          updatedAt: timestamp,
-          submittedBy: "Dr. Nimal Perera",
-          description: payload.description,
-          requisitionType: payload.requisitionType,
-          currentStockBalance: payload.currentStockBalance,
-          fundingSource: payload.fundingSource,
-          openingDate: payload.openingDate,
-          closingDate: payload.closingDate,
-          documentFee: payload.documentFee,
-          requiresBidBond: payload.requiresBidBond,
-          bidBondPercentage: payload.bidBondPercentage,
-          activityLog: [{
-            id: `log-${localId}-1`,
-            stepIndex: 0,
-            actor: "Dr. Nimal Perera",
-            role: "HOD",
-            action: "Purchase requisition submitted.",
-            timestamp,
-          }],
-        };
-        setProcurements(current => mergeProcurement(current, created));
-        return created;
-      }
+      const created = await procurementApi.createProcurement(payload);
+      setProcurements(current => mergeProcurement(current, created));
+      return created;
     },
     async updateProcurement(id, payload, actor) {
       try {

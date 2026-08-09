@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import usjLogo from "../../usj-logo.png";
 import { BackButton } from "./ui/BackButton";
+import { ApiError } from "../api/client";
 import { User, Lock, Eye, EyeOff, Check, Loader2, CheckCircle2 } from "lucide-react";
 
 interface LoginScreenProps {
@@ -36,7 +37,11 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
     try {
       await onLogin(username, password);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Unable to sign in");
+      if (err instanceof ApiError && err.status === 401) {
+        setSubmitError("Username or password is incorrect.");
+      } else {
+        setSubmitError(err instanceof Error ? err.message : "Unable to sign in");
+      }
     } finally {
       setIsLoading(false);
     }

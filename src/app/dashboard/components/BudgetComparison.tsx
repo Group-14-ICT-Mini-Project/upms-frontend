@@ -1,14 +1,16 @@
 interface BudgetComparisonProps {
   requested: number;
   allocated: number;
-  available: number;
+  totalAvailable: number;
   currencyLabel?: string;
 }
 
-export function BudgetComparison({ requested, allocated, available, currencyLabel = "LKR" }: BudgetComparisonProps) {
-  const used = allocated - available;
-  const allocatedPercent = allocated > 0 ? (used / allocated) * 100 : 0;
-  const requestedVsAllocated = allocated > 0 ? (requested / allocated) * 100 : 0;
+export function BudgetComparison({ requested, allocated, totalAvailable, currencyLabel = "LKR" }: BudgetComparisonProps) {
+  const clampPercent = (value: number) => Math.max(0, Math.min(value, 100));
+  const available = totalAvailable - allocated;
+  const usedPercent = totalAvailable > 0 ? clampPercent((allocated / totalAvailable) * 100) : 0;
+  const allocationPercent = totalAvailable > 0 ? clampPercent((allocated / totalAvailable) * 100) : 0;
+  const availablePercent = totalAvailable > 0 ? clampPercent((available / totalAvailable) * 100) : 0;
 
   const formatAmount = (amt: number) => {
     if (amt >= 1_000_000) {
@@ -46,7 +48,7 @@ export function BudgetComparison({ requested, allocated, available, currencyLabe
             <div style={{
               height: "100%",
               background: "#1D4ED8",
-              width: `${Math.min(requestedVsAllocated, 100)}%`,
+              width: "100%",
               transition: "width 0.3s ease",
             }} />
           </div>
@@ -67,7 +69,7 @@ export function BudgetComparison({ requested, allocated, available, currencyLabe
             <div style={{
               height: "100%",
               background: "#15803D",
-              width: "100%",
+              width: `${allocationPercent}%`,
             }} />
           </div>
         </div>
@@ -79,7 +81,7 @@ export function BudgetComparison({ requested, allocated, available, currencyLabe
             <span style={{
               fontSize: 12,
               fontWeight: 700,
-              color: available > 0 ? "#15803D" : "#DC2626",
+              color: available >= 0 ? "#15803D" : "#DC2626",
             }}>
               {formatAmount(available)}
             </span>
@@ -92,8 +94,8 @@ export function BudgetComparison({ requested, allocated, available, currencyLabe
           }}>
             <div style={{
               height: "100%",
-              background: available > 0 ? "#10B981" : "#EF4444",
-              width: `${Math.min((available / allocated) * 100, 100)}%`,
+              background: available >= 0 ? "#10B981" : "#EF4444",
+              width: `${availablePercent}%`,
             }} />
           </div>
         </div>
@@ -104,7 +106,7 @@ export function BudgetComparison({ requested, allocated, available, currencyLabe
         <div>
           <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 2 }}>Used from Budget</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
-            {allocatedPercent.toFixed(0)}%
+            {usedPercent.toFixed(0)}%
           </div>
         </div>
         <div>
@@ -112,9 +114,9 @@ export function BudgetComparison({ requested, allocated, available, currencyLabe
           <div style={{
             fontSize: 14,
             fontWeight: 700,
-            color: requested <= allocated ? "#10B981" : "#EF4444",
+            color: allocated <= totalAvailable ? "#10B981" : "#EF4444",
           }}>
-            {requested <= allocated ? "Within Budget" : "Exceeds Budget"}
+            {allocated <= totalAvailable ? "Within Budget" : "Exceeds Budget"}
           </div>
         </div>
       </div>

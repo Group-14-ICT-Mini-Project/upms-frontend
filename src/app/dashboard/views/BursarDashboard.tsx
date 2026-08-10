@@ -12,10 +12,9 @@ import { formatLKR } from "../data";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonTable } from "../components/SkeletonLoader";
 import { useProcurements } from "../ProcurementContext";
+import { useBudgets } from "../BudgetContext";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { useNotifications } from "../../notifications/NotificationContext";
-
-const INITIAL_UNIVERSITY_AVAILABLE_BALANCE = 850_000;
 
 interface BursarDashboardProps {
   user: UserContext;
@@ -56,6 +55,7 @@ function BursarOverview({ user, onTabChange }: { user: UserContext; onTabChange:
 
 function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcurementDetails: (id: string) => void; user: UserContext }) {
   const { getProcurementsForUser, updateProcurement } = useProcurements();
+  const { getAllocationForFaculty, getBudgetUsageForFaculty } = useBudgets();
   const { addNotification } = useNotifications();
   const myProcurements = getProcurementsForUser(user);
   const pending = myProcurements.filter(p =>
@@ -81,15 +81,22 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
     }
   }, [pending, selected]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const allocation = getAllocationForFaculty(selected.faculty);
+    setBudgetCode(allocation?.budgetCode ?? "");
+  }, [getAllocationForFaculty, selected?.id]);
+
   const handleVerify = async () => {
     if (!selected) return;
     const allocatedAmount = Number(budgetAllocated);
-    const remainingBalance = INITIAL_UNIVERSITY_AVAILABLE_BALANCE - allocatedAmount;
+    const usage = getBudgetUsageForFaculty(selected.faculty, myProcurements);
+    const remainingBalance = usage.available + selected.value - allocatedAmount;
     await updateProcurement(selected.id, {
       status: "Funds Verified",
       budgetCode,
       availableFunds: remainingBalance,
-      notes: `Funds verified. Allocated to this procurement: ${formatLKR(allocatedAmount)}. University balance before allocation: ${formatLKR(INITIAL_UNIVERSITY_AVAILABLE_BALANCE)}. Remaining balance: ${formatLKR(remainingBalance)}.`,
+      notes: `Funds verified against ${selected.faculty} allocation. Allocated to this procurement: ${formatLKR(allocatedAmount)}. Faculty balance after allocation: ${formatLKR(remainingBalance)}.`,
     }, { name: user.name, role: user.role });
     setVerified(p => new Set([...p, selected.id]));
     setSelected(null);
@@ -121,9 +128,28 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
     setFeedback({ message: `${selected.id} was rejected successfully.`, tone: "warning" });
   };
 
+  const selectedAllocation = selected ? getAllocationForFaculty(selected.faculty) : null;
+  const selectedUsage = selected ? getBudgetUsageForFaculty(selected.faculty, myProcurements) : null;
+  const selectedAvailableBefore = selected && selectedUsage ? selectedUsage.available + selected.value : 0;
+  const requestedAllocationAmount = Number(budgetAllocated);
+  const canVerifyFunds = Boolean(
+    selectedAllocation &&
+    budgetCode &&
+    budgetAllocated &&
+    Number.isFinite(requestedAllocationAmount) &&
+    requestedAllocationAmount > 0 &&
+    requestedAllocationAmount <= selectedAvailableBefore
+  );
+
   return (
     <div style={{ padding: "28px 28px" }}>
-      <PageTitleBar title="Fund Verification" subtitle="Verify budget availability for pending requisitions" />
+      <PageTitleBar
+        title={user.role === "FBUR" ? "Faculty Budget Verification" : "Fund Verification"}
+        subtitle={user.role === "FBUR"
+          ? "Verify requisitions against the budget allocated to your faculty by Finance"
+          : "Verify budget availability for pending requisitions"
+        }
+      />
 
       {feedback && (
         <div
@@ -212,8 +238,23 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
             <BudgetComparison
               requested={selected.value}
               allocated={budgetAllocated ? Number(budgetAllocated) : 0}
-              totalAvailable={INITIAL_UNIVERSITY_AVAILABLE_BALANCE}
+              totalAvailable={selectedAvailableBefore}
             />
+
+            <div style={{ background: selectedAllocation ? "#F8FAFC" : "#FFFBEB", border: `1px solid ${selectedAllocation ? "#E2E8F0" : "#FDE68A"}`, borderRadius: 14, padding: "16px 18px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", marginBottom: 4 }}>Faculty Budget Allocation</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>{selectedAllocation ? formatLKR(selectedAllocation.allocation) : "Not allocated"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", marginBottom: 4 }}>Budget Code</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>{selectedAllocation?.budgetCode ?? "Finance required"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", marginBottom: 4 }}>Faculty Bursar Spend Authority</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: selectedAvailableBefore < selected.value ? "#B91C1C" : "#15803D" }}>{formatLKR(selectedAvailableBefore)}</div>
+              </div>
+            </div>
 
             {/* Verification Form */}
             <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 14, padding: "20px", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -240,9 +281,35 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#DC2626" }}>Budget Shortfall</div>
                     <div style={{ fontSize: 11, color: "#DC2626", marginTop: 2 }}>
-                      The allocated amount is less than the requested amount. Consider escalating to Main Bursar.
+                      The allocated amount is less than the requested amount. Ask Finance Division to revise this faculty allocation if more spending authority is needed.
                     </div>
                   </div>
+                </div>
+              )}
+              {budgetAllocated && Number(budgetAllocated) > selectedAvailableBefore && (
+                <div style={{
+                  padding: 12,
+                  background: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  color: "#B91C1C",
+                  fontWeight: 650,
+                }}>
+                  This amount exceeds the faculty budget available from Finance.
+                </div>
+              )}
+              {!selectedAllocation && (
+                <div style={{
+                  padding: 12,
+                  background: "#FFFBEB",
+                  border: "1px solid #FDE68A",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  color: "#92400E",
+                  fontWeight: 650,
+                }}>
+                  Finance Division must allocate a budget to {selected.faculty} before funds can be verified.
                 </div>
               )}
 
@@ -265,17 +332,17 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                 </button>
                 <button
                   onClick={handleVerify}
-                  disabled={!budgetCode || !budgetAllocated}
+                  disabled={!canVerifyFunds}
                   style={{
                     flex: 2,
                     padding: "10px",
-                    background: !budgetCode || !budgetAllocated ? "#D1D5DB" : "#15803D",
+                    background: !canVerifyFunds ? "#D1D5DB" : "#15803D",
                     color: "#FFFFFF",
                     border: "none",
                     borderRadius: 9,
                     fontSize: 13,
                     fontWeight: 700,
-                    cursor: !budgetCode || !budgetAllocated ? "not-allowed" : "pointer",
+                    cursor: !canVerifyFunds ? "not-allowed" : "pointer",
                   }}
                 >
                   Verify Funds

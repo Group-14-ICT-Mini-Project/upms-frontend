@@ -656,47 +656,9 @@ function NewRequisitionPanel({ onSubmit, onViewProcurement, user }: { onSubmit: 
         boxSizing: "border-box",
       }}>
         <div style={{ maxWidth: 560, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#111827", margin: "0 0 10px", letterSpacing: "-0.02em" }}>
+          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#111827", margin: "0 0 36px", letterSpacing: "-0.02em" }}>
             Requisition Submitted!
           </h2>
-
-          <p style={{ fontSize: 15, fontWeight: 600, color: "#374151", margin: "0 0 16px" }}>
-            {form.title}
-          </p>
-
-          {form.signature && (
-            <div style={{
-              marginBottom: 16,
-              padding: "10px 16px",
-              background: "#F9FAFB",
-              border: "1px solid #E5E7EB",
-              borderRadius: 10,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 4,
-            }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Digitally Signed PNG Attached</span>
-              <img src={form.signature} alt="Digital Signature" style={{ maxHeight: 50, maxWidth: "100%", objectFit: "contain" }} />
-            </div>
-          )}
-
-          {/* Workflow next-step hint */}
-          <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            background: "#FFFBEB",
-            border: "1px solid #FDE68A",
-            borderRadius: 10,
-            padding: "10px 16px",
-            marginBottom: 36,
-            fontSize: 12,
-            color: "#92400E",
-            fontWeight: 600,
-          }}>
-            Next step — Bursar will verify budget allocation
-          </div>
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>

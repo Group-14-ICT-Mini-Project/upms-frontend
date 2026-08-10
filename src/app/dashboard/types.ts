@@ -84,6 +84,7 @@ export const ROLE_NAV_TABS: Record<Role, NavTab[]> = {
   ],
   FIN: [
     { key: "dashboard",    label: "Dashboard" },
+    { key: "budget-allocation", label: "Budget Allocation" },
     { key: "payments",     label: "Payments" },
     { key: "procurements", label: "All Procurements" },
   ],

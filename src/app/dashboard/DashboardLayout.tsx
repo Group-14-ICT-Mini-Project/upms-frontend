@@ -79,6 +79,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "my-bids":             { title: "My Bids",              subtitle: "Track your submitted bids" },
   "submit-bid":          { title: "Submit Bid",           subtitle: "Submit a sealed bid for an open tender" },
   "payments":            { title: "Payments",             subtitle: "Process payments after quality report approval" },
+  "budget-allocation":   { title: "Budget Allocation",    subtitle: "Allocate faculty-wise procurement spending limits" },
 };
 
 interface DashboardLayoutProps {

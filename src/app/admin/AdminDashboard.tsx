@@ -116,12 +116,9 @@ export function AdminDashboard({ user, activeTab }: AdminDashboardProps) {
     setError("");
     setNotice("");
     try {
-      const response = await adminUsersApi.approveUser(request.id);
+      await adminUsersApi.approveUser(request.id);
       await loadAdminData();
-      setNotice(response.emailWarning
-        ? `${request.username} approved. Email warning: ${response.emailWarning}`
-        : `${request.username} approved and notified by email.`
-      );
+      setNotice(`${request.username} approved.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to approve user");
     } finally {

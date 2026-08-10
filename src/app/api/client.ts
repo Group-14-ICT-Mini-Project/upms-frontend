@@ -90,11 +90,16 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     const defaultMessage = getDefaultErrorMessage(response.status);
     let message = defaultMessage;
     try {
-      const body = await response.json();
-      if (response.status === 401) {
-        message = defaultMessage;
+      const text = await response.text();
+      if (text) {
+        try {
+          const body = JSON.parse(text);
+          message = body.message ?? body.error ?? text;
+        } catch {
+          message = text;
+        }
       } else {
-        message = body.message ?? body.error ?? defaultMessage;
+        message = defaultMessage;
       }
     } catch {
       // Keep the default message when the backend returns no JSON body.

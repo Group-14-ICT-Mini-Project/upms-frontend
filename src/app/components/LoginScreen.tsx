@@ -8,10 +8,11 @@ import { User, Lock, Eye, EyeOff, Check, Loader2, CheckCircle2 } from "lucide-re
 interface LoginScreenProps {
   onBack: () => void;
   onLogin: (username: string, password: string) => Promise<void>;
+  onMicrosoftLogin: () => Promise<void>;
   onGoRegister: () => void;
 }
 
-export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps) {
+export function LoginScreen({ onBack, onLogin, onMicrosoftLogin, onGoRegister }: LoginScreenProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +20,8 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const [submitError, setSubmitError] = useState("");
+  const [microsoftError, setMicrosoftError] = useState("");
+  const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
 
   const validate = () => {
@@ -26,6 +29,17 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
     if (!username.trim()) errs.username = "Username is required";
     if (!password) errs.password = "Password is required";
     return errs;
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setIsMicrosoftLoading(true);
+    setMicrosoftError("");
+    try {
+      await onMicrosoftLogin();
+    } catch (err) {
+      setMicrosoftError(err instanceof Error ? err.message : "Microsoft sign-in failed.");
+      setIsMicrosoftLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,16 +215,25 @@ export function LoginScreen({ onBack, onLogin, onGoRegister }: LoginScreenProps)
         {/* Microsoft Outlook SSO */}
         <button
           type="button"
+          onClick={handleMicrosoftLogin}
+          disabled={isMicrosoftLoading}
           className="w-full py-3 rounded-xl flex items-center justify-center gap-2.5 transition-all bg-white border border-gray-200 text-gray-900 font-medium text-[0.88rem] hover:bg-gray-50 hover:border-gray-300"
         >
-          <svg width="17" height="17" viewBox="0 0 21 21" fill="none">
-            <rect x="1" y="1" width="9" height="9" fill="#F25022" />
-            <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
-            <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
-            <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
-          </svg>
-          Continue with Microsoft Outlook
+          {isMicrosoftLoading ? (
+            <Loader2 size={17} strokeWidth={2} className="animate-spin" />
+          ) : (
+            <svg width="17" height="17" viewBox="0 0 21 21" fill="none">
+              <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+              <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+              <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+              <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+            </svg>
+          )}
+          {isMicrosoftLoading ? "Opening Microsoft..." : "Continue with Microsoft Outlook"}
         </button>
+        {microsoftError && (
+          <p className="mt-2 text-red-500 text-xs text-center">{microsoftError}</p>
+        )}
 
         {/* Register link */}
         <p className="text-center mt-6 text-gray-500 text-[0.85rem]">

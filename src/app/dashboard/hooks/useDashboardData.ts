@@ -26,6 +26,7 @@ export function useDashboardData(user: UserContext): {
 
 function getActionQueueForUser(user: UserContext, procurements: Procurement[]) {
   const statusesByRole: Record<UserContext["role"], Procurement["status"][]> = {
+    ADM: [],
     HOD: ["Quality Report Required"],
     BUR: ["Pending Fund Verification"],
     FBUR: ["Pending Fund Verification"],

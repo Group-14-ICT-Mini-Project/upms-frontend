@@ -96,7 +96,7 @@ function DashboardRoute() {
   const auth = useAuth();
   const { role: roleParam } = useParams<{ role: string }>();
   const roleSlug = (roleParam ?? "").toUpperCase() as Role;
-  const validRoles: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
+  const validRoles: Role[] = ["ADM", "HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
   if (auth.user && auth.user.role !== roleSlug) {
     return <Navigate to={dashboardPath(auth.user.role)} replace />;
   }
@@ -116,9 +116,10 @@ function dashboardPath(role: Role) {
 }
 
 
-const ROLES: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
+const ROLES: Role[] = ["ADM", "HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
 
 export const DEMO_USERS: Record<Role, UserContext> = {
+  ADM:  { role: "ADM",  name: "System Administrator",       title: "System Administrator",    faculty: undefined,                     department: undefined,           avatarInitials: "SA" },
   HOD:  { role: "HOD",  name: "Dr. Nimal Perera",          title: "Head of Department",      faculty: "Faculty of Applied Sciences", department: "Computer Science",  avatarInitials: "NP" },
   BUR:  { role: "BUR",  name: "Mr. Kamal Silva",            title: "Bursar (Main)",           faculty: undefined,                     department: undefined,           avatarInitials: "KS" },
   FBUR: { role: "FBUR", name: "Mrs. Indrani Perera",        title: "Faculty Bursar",          faculty: "Faculty of Applied Sciences", department: undefined,           avatarInitials: "IP" },

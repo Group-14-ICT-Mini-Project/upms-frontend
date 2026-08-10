@@ -3,6 +3,7 @@ import {
   BadgeCheck, Sliders, Building2, Scale, ClipboardCheck,
   ShieldCheck, PackageCheck, FileText, Send, CreditCard,
   LogOut, Search, X, XCircle,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import usjLogo from "../../../usj-logo.png";
@@ -25,6 +26,14 @@ interface NavSection {
 }
 
 const ROLE_NAV: Record<Role, NavSection[]> = {
+  ADM: [
+    {
+      title: "ADMIN",
+      items: [
+        { key: "dashboard", label: "User Approvals", icon: Users },
+      ],
+    },
+  ],
   HOD: [
     {
       title: "MAIN MENU",

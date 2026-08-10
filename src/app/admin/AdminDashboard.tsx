@@ -17,7 +17,6 @@ import * as adminUsersApi from "../api/adminUsers";
 interface AdminDashboardProps {
   user: UserContext;
   activeTab: TabKey;
-  onTabChange: (tab: TabKey) => void;
 }
 
 type TabKey = "pending" | "users";
@@ -74,7 +73,7 @@ function buildEditForm(user: adminUsersApi.AdminUser): EditForm {
   };
 }
 
-export function AdminDashboard({ user, activeTab, onTabChange }: AdminDashboardProps) {
+export function AdminDashboard({ user, activeTab }: AdminDashboardProps) {
   const [pendingUsers, setPendingUsers] = useState<adminUsersApi.PendingUser[]>([]);
   const [allUsers, setAllUsers] = useState<adminUsersApi.AdminUser[]>([]);
   const [roles, setRoles] = useState<adminUsersApi.RoleOption[]>([]);
@@ -259,15 +258,6 @@ export function AdminDashboard({ user, activeTab, onTabChange }: AdminDashboardP
           <button onClick={loadAdminData} disabled={isLoading} style={secondaryButtonStyle}>
             {isLoading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
             Refresh
-          </button>
-        </div>
-
-        <div style={{ display: "flex", gap: 8, padding: "12px 20px", borderBottom: "1px solid #EEF2F7" }}>
-          <button onClick={() => onTabChange("pending")} style={activeTab === "pending" ? activeTabStyle : tabStyle}>
-            Pending Approvals
-          </button>
-          <button onClick={() => onTabChange("users")} style={activeTab === "users" ? activeTabStyle : tabStyle}>
-            All Users
           </button>
         </div>
 
@@ -618,8 +608,6 @@ const baseButtonStyle: CSSProperties = {
 const primaryButtonStyle: CSSProperties = { ...baseButtonStyle, background: "#7A0C0C", color: "#FFFFFF" };
 const dangerButtonStyle: CSSProperties = { ...baseButtonStyle, background: "#FEF2F2", color: "#B91C1C" };
 const secondaryButtonStyle: CSSProperties = { ...baseButtonStyle, background: "#F9FAFB", color: "#374151", border: "1px solid #E5E7EB" };
-const tabStyle: CSSProperties = { ...secondaryButtonStyle, border: "1px solid transparent" };
-const activeTabStyle: CSSProperties = { ...primaryButtonStyle };
 const rolePillStyle: CSSProperties = {
   display: "inline-block",
   padding: "4px 8px",

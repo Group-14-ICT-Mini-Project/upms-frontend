@@ -289,7 +289,6 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
             <AdminDashboard
               user={user}
               activeTab={activeKey === "all-users" ? "users" : "pending"}
-              onTabChange={(tab) => handleNavigate(tab === "users" ? "all-users" : "dashboard")}
             />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "HOD" && (

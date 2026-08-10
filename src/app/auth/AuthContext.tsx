@@ -6,6 +6,7 @@ import {
   setAuthToken,
   setRefreshToken,
   clearAuthData,
+  getAuthToken,
   getStoredUser,
   setStoredUser,
 } from "../api/client";
@@ -60,9 +61,12 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Restore the saved profile on refresh. Demo sessions intentionally have no
-  // access token, so requiring a token here would discard their selected role.
   const [user, setUser] = useState<UserContext | null>(() => {
+    if (!getAuthToken()) {
+      clearAuthData();
+      return null;
+    }
+
     return getStoredUser<UserContext>();
   });
   const [isLoading] = useState(false);

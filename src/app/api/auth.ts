@@ -6,6 +6,10 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface MicrosoftLoginRequest {
+  accessToken: string;
+}
+
 export interface RegisterRequest {
   username: string;
   firstName: string;
@@ -35,6 +39,13 @@ export interface AuthResponse {
 // ── API calls ─────────────────────────────────────────────────
 export function login(payload: LoginRequest) {
   return apiRequest<AuthResponse>("/v1/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function microsoftLogin(payload: MicrosoftLoginRequest) {
+  return apiRequest<AuthResponse>("/v1/auth/microsoft", {
     method: "POST",
     body: JSON.stringify(payload),
   });

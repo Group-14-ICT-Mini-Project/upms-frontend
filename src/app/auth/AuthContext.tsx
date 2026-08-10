@@ -51,6 +51,7 @@ interface AuthContextValue {
   user: UserContext | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<UserContext>;
+  loginWithMicrosoftToken: (accessToken: string) => Promise<UserContext>;
   register: (payload: authApi.RegisterRequest) => Promise<void>;
   logout: () => void;
   setDemoUser: (user: UserContext) => void;
@@ -75,6 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthToken(response.accessToken);
       setRefreshToken(response.refreshToken);
       // Build & persist user context
+      const userCtx = buildUserContext(response);
+      setStoredUser(userCtx);
+      setUser(userCtx);
+      return userCtx;
+    },
+    async loginWithMicrosoftToken(accessToken) {
+      const response = await authApi.microsoftLogin({ accessToken });
+      setAuthToken(response.accessToken);
+      setRefreshToken(response.refreshToken);
       const userCtx = buildUserContext(response);
       setStoredUser(userCtx);
       setUser(userCtx);

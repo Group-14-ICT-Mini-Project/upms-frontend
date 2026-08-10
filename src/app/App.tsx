@@ -6,9 +6,10 @@ import { WaitingApproval } from "./components/WaitingApproval";
 import { DashboardLayout } from "./dashboard/DashboardLayout";
 import type { Role } from "./dashboard/types";
 import { ROLE_META } from "./dashboard/types";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import usjLogo from "../usj-logo.png";
 import { useAuth } from "./auth/AuthContext";
+import { exchangeMicrosoftCode, startMicrosoftLogin } from "./auth/microsoft";
 import type { UserContext } from "./dashboard/types";
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
     <Routes>
       <Route path="/"             element={<WelcomeRoute />} />
       <Route path="/login"        element={<LoginRoute />} />
+      <Route path="/auth/microsoft/callback" element={<MicrosoftCallbackRoute />} />
       <Route path="/register"     element={<RegisterRoute />} />
       <Route path="/waiting"      element={<WaitingRoute />} />
       <Route path="/select-role"  element={<RolePickerRoute />} />
@@ -50,8 +52,73 @@ function LoginRoute() {
         const user = await auth.login(username, password);
         nav(`/dashboard/${user.role.toLowerCase()}`);
       }}
+      onMicrosoftLogin={startMicrosoftLogin}
       onGoRegister={() => nav("/register")}
     />
+  );
+}
+
+function MicrosoftCallbackRoute() {
+  const nav = useNavigate();
+  const auth = useAuth();
+  const [error, setError] = useState("");
+  const hasStarted = useRef(false);
+
+  useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const microsoftError = params.get("error_description") ?? params.get("error");
+    const code = params.get("code");
+    const state = params.get("state");
+
+    async function finishLogin() {
+      try {
+        if (microsoftError) {
+          throw new Error(microsoftError);
+        }
+
+        if (!code) {
+          throw new Error("Microsoft did not return a sign-in code.");
+        }
+
+        const microsoftAccessToken = await exchangeMicrosoftCode(code, state);
+        const user = await auth.loginWithMicrosoftToken(microsoftAccessToken);
+        nav(`/dashboard/${user.role.toLowerCase()}`, { replace: true });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Microsoft sign-in failed.");
+      }
+    }
+
+    void finishLogin();
+  }, [auth, nav]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6 font-sans">
+      <div className="w-full max-w-[420px] rounded-2xl bg-white border border-gray-200 shadow-md p-8 text-center">
+        <div className="mx-auto mb-5 w-12 h-12 rounded-xl flex items-center justify-center bg-white border border-gray-200 shadow-md p-1.5">
+          <img src={usjLogo} alt="USJ Logo" className="w-9 h-9 object-contain" />
+        </div>
+        <h1 className="text-gray-900 text-[1.45rem] font-bold tracking-tight">
+          Microsoft Sign In
+        </h1>
+        {error ? (
+          <>
+            <p className="mt-3 text-sm text-red-500">{error}</p>
+            <button
+              type="button"
+              onClick={() => nav("/login", { replace: true })}
+              className="mt-6 w-full py-3 rounded-full bg-gradient-to-br from-maroon to-maroon-dark text-white font-bold text-sm"
+            >
+              Return to Sign In
+            </button>
+          </>
+        ) : (
+          <p className="mt-3 text-sm text-gray-500">Finishing sign in...</p>
+        )}
+      </div>
+    </div>
   );
 }
 

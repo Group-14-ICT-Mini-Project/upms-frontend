@@ -3,7 +3,7 @@ import {
   BadgeCheck, Sliders, Building2, Scale, ClipboardCheck,
   ShieldCheck, PackageCheck, FileText, Send, CreditCard,
   LogOut, Search, X, XCircle,
-  Users,
+  UserCheck, Users,
 } from "lucide-react";
 import { useState } from "react";
 import usjLogo from "../../../usj-logo.png";
@@ -30,7 +30,8 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
     {
       title: "ADMIN",
       items: [
-        { key: "dashboard", label: "User Approvals", icon: Users },
+        { key: "dashboard", label: "Pending Approvals", icon: UserCheck },
+        { key: "all-users", label: "All Users", icon: Users },
       ],
     },
   ],

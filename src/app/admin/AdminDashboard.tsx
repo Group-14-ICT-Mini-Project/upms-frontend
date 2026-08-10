@@ -16,10 +16,13 @@ import * as adminUsersApi from "../api/adminUsers";
 
 interface AdminDashboardProps {
   user: UserContext;
+  activeTab: TabKey;
+  onTabChange: (tab: TabKey) => void;
 }
 
 type TabKey = "pending" | "users";
 type ApprovalStatus = adminUsersApi.UpdateAdminUserRequest["approvalStatus"];
+type ActionState = { userId: number; action: "approve" | "reject" | "save" | "delete" } | null;
 
 interface EditForm {
   username: string;
@@ -71,15 +74,14 @@ function buildEditForm(user: adminUsersApi.AdminUser): EditForm {
   };
 }
 
-export function AdminDashboard({ user }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("pending");
+export function AdminDashboard({ user, activeTab, onTabChange }: AdminDashboardProps) {
   const [pendingUsers, setPendingUsers] = useState<adminUsersApi.PendingUser[]>([]);
   const [allUsers, setAllUsers] = useState<adminUsersApi.AdminUser[]>([]);
   const [roles, setRoles] = useState<adminUsersApi.RoleOption[]>([]);
   const [editingUser, setEditingUser] = useState<adminUsersApi.AdminUser | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionUserId, setActionUserId] = useState<number | null>(null);
+  const [actionState, setActionState] = useState<ActionState>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -111,7 +113,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   }, []);
 
   async function handleApprove(request: adminUsersApi.PendingUser) {
-    setActionUserId(request.id);
+    setActionState({ userId: request.id, action: "approve" });
     setError("");
     setNotice("");
     try {
@@ -124,14 +126,14 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to approve user");
     } finally {
-      setActionUserId(null);
+      setActionState(null);
     }
   }
 
   async function handleReject(request: adminUsersApi.PendingUser) {
     const reason = window.prompt(`Reason for rejecting ${request.username}?`);
     if (reason === null) return;
-    setActionUserId(request.id);
+    setActionState({ userId: request.id, action: "reject" });
     setError("");
     setNotice("");
     try {
@@ -141,7 +143,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to reject user");
     } finally {
-      setActionUserId(null);
+      setActionState(null);
     }
   }
 
@@ -163,7 +165,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
       return;
     }
 
-    setActionUserId(editingUser.id);
+    setActionState({ userId: editingUser.id, action: "save" });
     setError("");
     setNotice("");
     try {
@@ -188,14 +190,14 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to update user");
     } finally {
-      setActionUserId(null);
+      setActionState(null);
     }
   }
 
   async function handleDelete(target: adminUsersApi.AdminUser) {
     const confirmed = window.confirm(`Delete ${target.username}? This cannot be undone.`);
     if (!confirmed) return;
-    setActionUserId(target.id);
+    setActionState({ userId: target.id, action: "delete" });
     setError("");
     setNotice("");
     try {
@@ -206,7 +208,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete user");
     } finally {
-      setActionUserId(null);
+      setActionState(null);
     }
   }
 
@@ -261,10 +263,10 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         </div>
 
         <div style={{ display: "flex", gap: 8, padding: "12px 20px", borderBottom: "1px solid #EEF2F7" }}>
-          <button onClick={() => setActiveTab("pending")} style={activeTab === "pending" ? activeTabStyle : tabStyle}>
+          <button onClick={() => onTabChange("pending")} style={activeTab === "pending" ? activeTabStyle : tabStyle}>
             Pending Approvals
           </button>
-          <button onClick={() => setActiveTab("users")} style={activeTab === "users" ? activeTabStyle : tabStyle}>
+          <button onClick={() => onTabChange("users")} style={activeTab === "users" ? activeTabStyle : tabStyle}>
             All Users
           </button>
         </div>
@@ -285,14 +287,14 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         ) : activeTab === "pending" ? (
           <PendingTable
             pendingUsers={pendingUsers}
-            actionUserId={actionUserId}
+            actionState={actionState}
             onApprove={handleApprove}
             onReject={handleReject}
           />
         ) : (
           <UsersTable
             users={allUsers}
-            actionUserId={actionUserId}
+            actionState={actionState}
             onEdit={startEdit}
             onDelete={handleDelete}
           />
@@ -361,8 +363,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
               <button onClick={() => { setEditingUser(null); setEditForm(null); }} style={secondaryButtonStyle}>Cancel</button>
-              <button onClick={handleSaveEdit} disabled={actionUserId === editingUser.id} style={primaryButtonStyle}>
-                {actionUserId === editingUser.id ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              <button onClick={handleSaveEdit} disabled={actionState?.userId === editingUser.id} style={primaryButtonStyle}>
+                {actionState?.userId === editingUser.id && actionState.action === "save" ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
                 Save Changes
               </button>
             </div>
@@ -375,12 +377,12 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
 function PendingTable({
   pendingUsers,
-  actionUserId,
+  actionState,
   onApprove,
   onReject,
 }: {
   pendingUsers: adminUsersApi.PendingUser[];
-  actionUserId: number | null;
+  actionState: ActionState;
   onApprove: (user: adminUsersApi.PendingUser) => void;
   onReject: (user: adminUsersApi.PendingUser) => void;
 }) {
@@ -408,7 +410,9 @@ function PendingTable({
         </thead>
         <tbody>
           {pendingUsers.map((request) => {
-            const isBusy = actionUserId === request.id;
+            const isApproveBusy = actionState?.userId === request.id && actionState.action === "approve";
+            const isRejectBusy = actionState?.userId === request.id && actionState.action === "reject";
+            const isBusy = actionState?.userId === request.id;
             return (
               <tr key={request.id} style={bodyRowStyle}>
                 <td style={tdStyle}>
@@ -425,11 +429,11 @@ function PendingTable({
                 <td style={{ ...tdStyle, textAlign: "right" }}>
                   <div style={{ display: "inline-flex", gap: 8 }}>
                     <button onClick={() => onReject(request)} disabled={isBusy} style={dangerButtonStyle}>
-                      {isBusy ? <Loader2 size={14} className="animate-spin" /> : <UserX size={14} />}
+                      {isRejectBusy ? <Loader2 size={14} className="animate-spin" /> : <UserX size={14} />}
                       Reject
                     </button>
                     <button onClick={() => onApprove(request)} disabled={isBusy} style={primaryButtonStyle}>
-                      {isBusy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                      {isApproveBusy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                       Approve
                     </button>
                   </div>
@@ -445,12 +449,12 @@ function PendingTable({
 
 function UsersTable({
   users,
-  actionUserId,
+  actionState,
   onEdit,
   onDelete,
 }: {
   users: adminUsersApi.AdminUser[];
-  actionUserId: number | null;
+  actionState: ActionState;
   onEdit: (user: adminUsersApi.AdminUser) => void;
   onDelete: (user: adminUsersApi.AdminUser) => void;
 }) {
@@ -473,7 +477,8 @@ function UsersTable({
         </thead>
         <tbody>
           {users.map((account) => {
-            const isBusy = actionUserId === account.id;
+            const isDeleteBusy = actionState?.userId === account.id && actionState.action === "delete";
+            const isBusy = actionState?.userId === account.id;
             return (
               <tr key={account.id} style={bodyRowStyle}>
                 <td style={tdStyle}>
@@ -498,7 +503,7 @@ function UsersTable({
                       Edit
                     </button>
                     <button onClick={() => onDelete(account)} disabled={isBusy} style={dangerButtonStyle}>
-                      {isBusy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      {isDeleteBusy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                       Delete
                     </button>
                   </div>

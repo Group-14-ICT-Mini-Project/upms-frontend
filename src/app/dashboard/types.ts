@@ -35,7 +35,8 @@ export interface NavTab {
 /** Nav tabs available per role */
 export const ROLE_NAV_TABS: Record<Role, NavTab[]> = {
   ADM: [
-    { key: "dashboard", label: "User Approvals" },
+    { key: "dashboard", label: "Pending Approvals" },
+    { key: "all-users", label: "All Users" },
   ],
   HOD: [
     { key: "dashboard",        label: "Dashboard" },

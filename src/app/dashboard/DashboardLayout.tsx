@@ -62,6 +62,7 @@ const DEMO_USERS: Record<Role, UserContext> = {
 /** Map nav key → page title for the breadcrumb header */
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "dashboard":           { title: "Overview",             subtitle: "Here is the summary of overall data" },
+  "all-users":           { title: "All Users",             subtitle: "Manage credentials, roles, and account status" },
   "new-requisition":     { title: "New Requisition",      subtitle: "Create a new purchase requisition" },
   "procurements":        { title: "All Procurements",     subtitle: "Full list of procurement records" },
   "status-tracker":      { title: "Procurement Tracker",  subtitle: "Step-by-step status and activity log" },
@@ -285,7 +286,11 @@ export function DashboardLayout({ role, onLogout }: DashboardLayoutProps) {
 
           {/* ── Role-specific views ── */}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "ADM" && (
-            <AdminDashboard user={user} />
+            <AdminDashboard
+              user={user}
+              activeTab={activeKey === "all-users" ? "users" : "pending"}
+              onTabChange={(tab) => handleNavigate(tab === "users" ? "all-users" : "dashboard")}
+            />
           )}
           {activeKey !== "status-tracker" && activeKey !== "procurement-details" && role === "HOD" && (
             <HODDashboard user={user} activeTab={activeKey} onTabChange={navigateTo} onViewProcurement={handleViewProcurement} onViewProcurementDetails={handleViewProcurementDetails} />

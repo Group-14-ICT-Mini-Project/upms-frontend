@@ -64,7 +64,7 @@ function RegisterRoute() {
       onBack={() => nav("/")}
       onRegister={async (payload) => {
         await auth.register(payload);
-        nav("/waiting");
+        nav(payload.role === "ADMIN" ? "/login" : "/waiting");
       }}
       onGoLogin={() => nav("/login")}
     />

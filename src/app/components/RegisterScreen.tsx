@@ -67,6 +67,7 @@ const FACULTIES = [
 ];
 
 const ROLES = [
+  { value: "ADMIN", label: "System Administrator" },
   { value: "HOD", label: "Head of Department" },
   { value: "BURSAR", label: "Bursar" },
   { value: "FACULTY_BURSAR", label: "Faculty Bursar" },

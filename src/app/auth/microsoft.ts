@@ -9,9 +9,25 @@ const MICROSOFT_REDIRECT_PATH = "/auth/microsoft/callback";
 
 const STATE_KEY = "upms_microsoft_oauth_state";
 const VERIFIER_KEY = "upms_microsoft_pkce_verifier";
+const STARTED_AT_KEY = "upms_microsoft_oauth_started_at";
+const OAUTH_SESSION_MAX_AGE_MS = 10 * 60 * 1000;
 
 function getRedirectUri() {
   return import.meta.env.VITE_MICROSOFT_REDIRECT_URI ?? `${window.location.origin}${MICROSOFT_REDIRECT_PATH}`;
+}
+
+function getOAuthStorage() {
+  return window.localStorage;
+}
+
+function assertRedirectUriMatchesCurrentOrigin() {
+  const redirectUri = new URL(getRedirectUri(), window.location.origin);
+
+  if (redirectUri.origin !== window.location.origin) {
+    throw new Error(
+      `Microsoft sign-in is configured for ${redirectUri.origin}, but this page is ${window.location.origin}. Open the app on ${redirectUri.origin} or update VITE_MICROSOFT_REDIRECT_URI.`
+    );
+  }
 }
 
 function base64UrlEncode(bytes: ArrayBuffer | Uint8Array) {
@@ -41,12 +57,16 @@ async function createCodeChallenge(verifier: string) {
 }
 
 export async function startMicrosoftLogin() {
+  assertRedirectUriMatchesCurrentOrigin();
+
   const state = createRandomString();
   const verifier = createRandomString(64);
   const challenge = await createCodeChallenge(verifier);
 
-  window.sessionStorage.setItem(STATE_KEY, state);
-  window.sessionStorage.setItem(VERIFIER_KEY, verifier);
+  const storage = getOAuthStorage();
+  storage.setItem(STATE_KEY, state);
+  storage.setItem(VERIFIER_KEY, verifier);
+  storage.setItem(STARTED_AT_KEY, String(Date.now()));
 
   const params = new URLSearchParams({
     client_id: MICROSOFT_CLIENT_ID,
@@ -66,11 +86,20 @@ export async function startMicrosoftLogin() {
 }
 
 export async function exchangeMicrosoftCode(code: string, state: string | null) {
-  const expectedState = window.sessionStorage.getItem(STATE_KEY);
-  const verifier = window.sessionStorage.getItem(VERIFIER_KEY);
+  assertRedirectUriMatchesCurrentOrigin();
 
-  window.sessionStorage.removeItem(STATE_KEY);
-  window.sessionStorage.removeItem(VERIFIER_KEY);
+  const storage = getOAuthStorage();
+  const expectedState = storage.getItem(STATE_KEY);
+  const verifier = storage.getItem(VERIFIER_KEY);
+  const startedAt = Number(storage.getItem(STARTED_AT_KEY) ?? "0");
+
+  storage.removeItem(STATE_KEY);
+  storage.removeItem(VERIFIER_KEY);
+  storage.removeItem(STARTED_AT_KEY);
+
+  if (!startedAt || Date.now() - startedAt > OAUTH_SESSION_MAX_AGE_MS) {
+    throw new Error("Microsoft sign-in session expired. Please try again.");
+  }
 
   if (!state || !expectedState || state !== expectedState) {
     throw new Error("Microsoft sign-in state could not be verified.");

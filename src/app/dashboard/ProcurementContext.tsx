@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { BidEntry, Procurement, Role, UserContext } from "./types";
-import { filterProcurementsForRole } from "./data";
+import { filterProcurementsForRole, getStepIndexForStatus } from "./data";
 import * as procurementApi from "../api/procurements";
 import { ApiError } from "../api/client";
 
@@ -39,6 +39,18 @@ function writeWorkflowOverride(id: string, override: Partial<Procurement>) {
   }));
 }
 
+function mergeActivityLogs(
+  ...sources: Array<Procurement["activityLog"]>
+): Procurement["activityLog"] {
+  const seen = new Set<string>();
+  return sources.flatMap(source => source ?? []).filter(log => {
+    const key = log.id || `${log.timestamp}-${log.role}-${log.action}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function applyWorkflowOverrides(list: Procurement[]) {
   const overrides = readWorkflowOverrides();
   return list.map(item => {
@@ -47,10 +59,7 @@ function applyWorkflowOverrides(list: Procurement[]) {
     return {
       ...item,
       ...override,
-      activityLog: [
-        ...(item.activityLog ?? []),
-        ...(override.activityLog ?? []),
-      ],
+      activityLog: mergeActivityLogs(item.activityLog, override.activityLog),
     };
   });
 }
@@ -62,6 +71,7 @@ function mergeProcurement(list: Procurement[], next: Procurement) {
 
 function applyLocalUpdate(current: Procurement, payload: procurementApi.UpdateProcurementRequest, actor?: { name: string; role: Role }): Procurement {
   const timestamp = new Date().toISOString();
+  const nextStatus = payload.status ?? current.status;
   const actionParts = [
     payload.status ? `Status changed to ${payload.status}` : null,
     payload.method ? `Method selected: ${payload.method}` : null,
@@ -80,7 +90,7 @@ function applyLocalUpdate(current: Procurement, payload: procurementApi.UpdatePr
       ...(current.activityLog ?? []),
       {
         id: `log-${Date.now()}`,
-        stepIndex: 0,
+        stepIndex: getStepIndexForStatus(nextStatus),
         actor: actor.name,
         role: actor.role,
         action: actionParts.join(". ") || "Procurement updated.",
@@ -152,7 +162,14 @@ export function ProcurementProvider({ children }: { children: React.ReactNode })
         let nextProcurement: Procurement = backendUpdated;
         setProcurements(current => {
           const existing = current.find(item => item.id === id);
-          nextProcurement = applyLocalUpdate(existing ? { ...existing, ...backendUpdated } : backendUpdated, payload, actor);
+          const base = existing
+            ? {
+                ...existing,
+                ...backendUpdated,
+                activityLog: mergeActivityLogs(existing.activityLog, backendUpdated.activityLog),
+              }
+            : backendUpdated;
+          nextProcurement = applyLocalUpdate(base, payload, actor);
           writeWorkflowOverride(id, toWorkflowOverride(nextProcurement));
           return mergeProcurement(current, nextProcurement);
         });

@@ -166,7 +166,12 @@ export function Sidebar({ user, activeKey, onNavigate, onSignOut }: SidebarProps
   const actionCounts = Object.fromEntries(
     Object.entries(actionStatuses).map(([key, status]) => [
       key,
-      visibleProcurements.filter(procurement => procurement.status === status).length,
+      visibleProcurements.filter(procurement => {
+        if (procurement.status !== status) return false;
+        if (key === "fund-verification" && user.role === "BUR") return procurement.value >= 500_000;
+        if (key === "fund-verification" && user.role === "FBUR") return procurement.value <= 500_000;
+        return true;
+      }).length,
     ]),
   ) as Record<string, number>;
 

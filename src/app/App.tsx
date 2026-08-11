@@ -163,7 +163,7 @@ function DashboardRoute() {
   const auth = useAuth();
   const { role: roleParam } = useParams<{ role: string }>();
   const roleSlug = (roleParam ?? "").toUpperCase() as Role;
-  const validRoles: Role[] = ["HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
+  const validRoles: Role[] = ["ADM", "HOD", "BUR", "FBUR", "SDC", "TEC", "TB", "STK", "SUP", "FIN"];
   if (!auth.user) {
     return <Navigate to="/login" replace />;
   }

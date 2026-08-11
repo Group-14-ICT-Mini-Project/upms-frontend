@@ -48,7 +48,12 @@ function BursarOverview({ user, onTabChange }: { user: UserContext; onTabChange:
     <div style={{ padding: "28px 28px", animation: "fadeIn 0.4s ease" }}>
       <WelcomeBanner user={user} />
       <StatCardRow total={myProcurements.length} inQueue={queue.length} actionRequired={queue.length} completed={0} />
-      <ActionQueueList items={queue} onViewAll={() => onTabChange("fund-verification")} onItemClick={() => onTabChange("fund-verification")} />
+      <ActionQueueList
+        items={queue}
+        onViewAll={() => onTabChange("fund-verification")}
+        onItemClick={() => onTabChange("fund-verification")}
+        subtitleField={user.role === "FBUR" ? "department" : "faculty"}
+      />
     </div>
   );
 }
@@ -92,7 +97,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
     if (user.role === "FBUR" && selected.value > 500_000) return;
     const allocatedAmount = Number(budgetAllocated);
     const usage = getBudgetUsageForFaculty(selected.faculty, myProcurements);
-    const remainingBalance = usage.available + selected.value - allocatedAmount;
+    const remainingBalance = usage.available - allocatedAmount;
     await updateProcurement(selected.id, {
       status: "Funds Verified",
       budgetCode,
@@ -132,7 +137,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 
   const selectedAllocation = selected ? getAllocationForFaculty(selected.faculty) : null;
   const selectedUsage = selected ? getBudgetUsageForFaculty(selected.faculty, myProcurements) : null;
-  const selectedAvailableBefore = selected && selectedUsage ? selectedUsage.available + selected.value : 0;
+  const selectedAvailableBefore = selected && selectedUsage ? selectedUsage.available : 0;
   const requestedAllocationAmount = Number(budgetAllocated);
   const canTakeFundAction = !selected || user.role !== "FBUR" || selected.value <= 500_000;
   const canVerifyFunds = Boolean(

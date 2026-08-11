@@ -64,6 +64,12 @@ function sameText(left?: string, right?: string) {
   return (left ?? "").trim().toLowerCase() === (right ?? "").trim().toLowerCase();
 }
 
+function isBudgetCommittedStatus(status: Procurement["status"]) {
+  return status !== "Pending Fund Verification" &&
+    status !== "Rejected" &&
+    status !== "Completed";
+}
+
 export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const [allocations, setAllocations] = useState<FacultyBudgetAllocation[]>(readCachedAllocations);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,7 +134,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         .filter(item => item.status === "Completed")
         .reduce((sum, item) => sum + item.value, 0);
       const committed = facultyProcurements
-        .filter(item => item.status !== "Rejected" && item.status !== "Completed")
+        .filter(item => isBudgetCommittedStatus(item.status))
         .reduce((sum, item) => sum + item.value, 0);
       const allocated = allocation?.allocation ?? 0;
 

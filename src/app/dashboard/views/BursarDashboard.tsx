@@ -89,6 +89,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 
   const handleVerify = async () => {
     if (!selected) return;
+    if (user.role === "FBUR" && selected.value > 500_000) return;
     const allocatedAmount = Number(budgetAllocated);
     const usage = getBudgetUsageForFaculty(selected.faculty, myProcurements);
     const remainingBalance = usage.available + selected.value - allocatedAmount;
@@ -107,6 +108,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
 
   const handleReject = async () => {
     if (!selected) return;
+    if (user.role === "FBUR" && selected.value > 500_000) return;
     const reason = rejectionReason.trim();
     if (!reason) return;
     await updateProcurement(selected.id, {
@@ -132,7 +134,9 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
   const selectedUsage = selected ? getBudgetUsageForFaculty(selected.faculty, myProcurements) : null;
   const selectedAvailableBefore = selected && selectedUsage ? selectedUsage.available + selected.value : 0;
   const requestedAllocationAmount = Number(budgetAllocated);
+  const canTakeFundAction = !selected || user.role !== "FBUR" || selected.value <= 500_000;
   const canVerifyFunds = Boolean(
+    canTakeFundAction &&
     selectedAllocation &&
     budgetCode &&
     budgetAllocated &&
@@ -313,41 +317,47 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, paddingTop: 10, borderTop: "1px solid #E5E7EB" }}>
-                <button
-                  onClick={() => setIsRejectDialogOpen(true)}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    background: "#FEF2F2",
-                    color: "#B91C1C",
-                    border: "1px solid #FECACA",
-                    borderRadius: 9,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Reject
-                </button>
-                <button
-                  onClick={handleVerify}
-                  disabled={!canVerifyFunds}
-                  style={{
-                    flex: 2,
-                    padding: "10px",
-                    background: !canVerifyFunds ? "#D1D5DB" : "#15803D",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: 9,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: !canVerifyFunds ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Verify Funds
-                </button>
-              </div>
+              {canTakeFundAction ? (
+                <div style={{ display: "flex", gap: 10, paddingTop: 10, borderTop: "1px solid #E5E7EB" }}>
+                  <button
+                    onClick={() => setIsRejectDialogOpen(true)}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: "#FEF2F2",
+                      color: "#B91C1C",
+                      border: "1px solid #FECACA",
+                      borderRadius: 9,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={handleVerify}
+                    disabled={!canVerifyFunds}
+                    style={{
+                      flex: 2,
+                      padding: "10px",
+                      background: !canVerifyFunds ? "#D1D5DB" : "#15803D",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: 9,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: !canVerifyFunds ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Verify Funds
+                  </button>
+                </div>
+              ) : (
+                <div style={{ padding: 12, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, fontSize: 12, color: "#92400E", fontWeight: 650, lineHeight: 1.5 }}>
+                  This procurement is over LKR 500,000. Faculty Bursar can view it, but only the Main Bursar can approve or reject it.
+                </div>
+              )}
             </div>
           </div>
         ) : (

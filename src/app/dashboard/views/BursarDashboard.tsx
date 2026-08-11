@@ -353,11 +353,7 @@ function FundVerificationPanel({ onViewProcurementDetails, user }: { onViewProcu
                     Verify Funds
                   </button>
                 </div>
-              ) : (
-                <div style={{ padding: 12, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, fontSize: 12, color: "#92400E", fontWeight: 650, lineHeight: 1.5 }}>
-                  This procurement is over LKR 500,000. Faculty Bursar can view it, but only the Main Bursar can approve or reject it.
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         ) : (

@@ -36,14 +36,26 @@ function buildUserContext(res: authApi.AuthResponse): UserContext {
   const primaryBackendRole = res.roles[0] ?? "HOD";
   const role = mapBackendRole(primaryBackendRole);
   const meta = ROLE_META[role];
+  const fullName = [res.firstName, res.lastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const displayName = fullName || res.username;
 
   return {
     role,
-    name: res.username,
+    name: displayName,
+    firstName: res.firstName,
+    lastName: res.lastName,
     title: meta.label,
     faculty: res.faculty,
     department: res.department,
-    avatarInitials: res.username.slice(0, 2).toUpperCase(),
+    avatarInitials: displayName
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase(),
   };
 }
 

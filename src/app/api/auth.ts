@@ -29,6 +29,8 @@ export interface AuthResponse {
   expiresIn: number;
   userId: number;
   username: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   faculty?: string;
   department?: string;

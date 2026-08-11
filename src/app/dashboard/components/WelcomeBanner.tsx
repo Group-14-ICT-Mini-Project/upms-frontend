@@ -12,6 +12,12 @@ interface WelcomeBannerProps {
 }
 
 export function WelcomeBanner({ user }: WelcomeBannerProps) {
+  const fullName = [user.firstName, user.lastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const displayName = fullName || user.name;
+
   return (
     <div
       style={{
@@ -46,7 +52,7 @@ export function WelcomeBanner({ user }: WelcomeBannerProps) {
           lineHeight: 1.2,
         }}
       >
-        {user.name}
+        {displayName}
       </h1>
 
       {/* Role title */}

@@ -12,6 +12,29 @@ import { useProcurements } from "../ProcurementContext";
 import { useBudgets } from "../BudgetContext";
 import { getAuthToken } from "../../api/client";
 
+const UNIVERSITY_FACULTIES = [
+  { value: "FACULTY_OF_TECHNOLOGY", label: "Faculty of Technology" },
+  { value: "FACULTY_OF_MANAGEMENT_STUDIES_AND_COMMERCE", label: "Faculty of Management Studies and Commerce" },
+  { value: "FACULTY_OF_APPLIED_SCIENCES", label: "Faculty of Applied Sciences" },
+  { value: "FACULTY_OF_MEDICAL_SCIENCES", label: "Faculty of Medical Sciences" },
+  { value: "FACULTY_OF_ENGINEERING", label: "Faculty of Engineering" },
+  { value: "FACULTY_OF_ALLIED_HEALTH_SCIENCES", label: "Faculty of Allied Health Sciences" },
+  { value: "FACULTY_OF_DENTAL_SCIENCES", label: "Faculty of Dental Sciences" },
+  { value: "FACULTY_OF_URBAN_AQUATIC_AND_BIORESOURCES", label: "Faculty of Urban Aquatic and Bioresources" },
+  { value: "FACULTY_OF_COMPUTING", label: "Faculty of Computing" },
+  { value: "FACULTY_OF_HUMANITIES_AND_SOCIAL_SCIENCES", label: "Faculty of Humanities and Social Sciences" },
+];
+
+function formatFacultyName(value: string) {
+  const known = UNIVERSITY_FACULTIES.find(item => item.value === value || item.label === value);
+  if (known) return known.label;
+  if (!value.includes("_")) return value;
+  return value
+    .toLowerCase()
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
 interface FinanceDashboardProps {
   user: UserContext;
@@ -323,10 +346,11 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
   const { procurements } = useProcurements();
   const { allocations, allocateFacultyBudget, getBudgetUsageForFaculty, error } = useBudgets();
   const faculties = Array.from(new Set([
+    ...UNIVERSITY_FACULTIES.map(item => item.value),
     ...allocations.map(item => item.faculty),
     ...procurements.map(item => item.faculty),
-  ].filter(Boolean))).sort();
-  const [faculty, setFaculty] = useState(faculties[0] ?? "Faculty of Applied Sciences");
+  ].filter(Boolean))).sort((a, b) => formatFacultyName(a).localeCompare(formatFacultyName(b)));
+  const [faculty, setFaculty] = useState(faculties[0] ?? UNIVERSITY_FACULTIES[0].value);
   const selectedAllocation = allocations.find(item => item.faculty === faculty);
   const [amount, setAmount] = useState(String(selectedAllocation?.allocation ?? ""));
   const [budgetCode, setBudgetCode] = useState(selectedAllocation?.budgetCode ?? "");
@@ -373,7 +397,7 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
         fiscalYear: new Date().getFullYear(),
         updatedBy: user.name,
       });
-      setMessage(`${faculty} procurement budget updated to ${formatLKR(allocation)}.`);
+      setMessage(`${formatFacultyName(faculty)} procurement budget updated to ${formatLKR(allocation)}.`);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save faculty budget allocation");
     } finally {
@@ -419,7 +443,7 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
             <div>
               <label style={labelStyle}>Faculty</label>
               <select value={faculty} onChange={event => handleFacultyChange(event.target.value)} style={inputStyle}>
-                {faculties.map(item => <option key={item} value={item}>{item}</option>)}
+                {faculties.map(item => <option key={item} value={item}>{formatFacultyName(item)}</option>)}
               </select>
             </div>
             <div>
@@ -480,7 +504,7 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
                 }}
               >
                 <span>
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 750, color: "#111827" }}>{item.faculty}</span>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 750, color: "#111827" }}>{formatFacultyName(item.faculty)}</span>
                   <span style={{ display: "block", fontSize: 11, color: "#6B7280", marginTop: 2 }}>{item.budgetCode}</span>
                 </span>
                 <span style={tableAmountStyle}>{formatLKR(usage.allocated)}</span>

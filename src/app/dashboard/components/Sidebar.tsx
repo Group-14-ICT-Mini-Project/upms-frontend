@@ -2,7 +2,7 @@ import {
   LayoutDashboard, FilePlus2, ClipboardList, FileCheck2,
   BadgeCheck, Sliders, Building2, Scale, ClipboardCheck,
   ShieldCheck, PackageCheck, FileText, Send, CreditCard,
-  LogOut, Search, X, XCircle,
+  Landmark, LogOut, Search, X, XCircle,
   UserCheck, Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -129,6 +129,7 @@ const ROLE_NAV: Record<Role, NavSection[]> = {
       title: "MAIN MENU",
       items: [
         { key: "dashboard",    label: "Dashboard",         icon: LayoutDashboard },
+        { key: "budget-allocation", label: "Manage Faculty Budgets", icon: Landmark },
         { key: "payments",     label: "Payments",          icon: CreditCard },
         { key: "procurements", label: "All Procurements",  icon: ClipboardList },
       ],

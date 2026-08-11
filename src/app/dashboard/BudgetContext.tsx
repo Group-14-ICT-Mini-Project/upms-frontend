@@ -94,21 +94,28 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     error,
     refresh,
     async allocateFacultyBudget(payload) {
-      const saved = await budgetApi.saveFacultyBudgetAllocation({
-        faculty: payload.faculty,
-        allocation: payload.allocation,
-        budgetCode: payload.budgetCode,
-        fiscalYear: payload.fiscalYear,
-        updatedBy: payload.updatedBy,
-      });
-      const nextAllocation = mapAllocation(saved);
-      setAllocations(current => {
-        const next = current.some(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear)
-          ? current.map(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear ? nextAllocation : item)
-          : [...current, nextAllocation].sort((a, b) => a.faculty.localeCompare(b.faculty));
-        writeCachedAllocations(next);
-        return next;
-      });
+      setError(null);
+      try {
+        const saved = await budgetApi.saveFacultyBudgetAllocation({
+          faculty: payload.faculty,
+          allocation: payload.allocation,
+          budgetCode: payload.budgetCode,
+          fiscalYear: payload.fiscalYear,
+          updatedBy: payload.updatedBy,
+        });
+        const nextAllocation = mapAllocation(saved);
+        setAllocations(current => {
+          const next = current.some(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear)
+            ? current.map(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear ? nextAllocation : item)
+            : [...current, nextAllocation].sort((a, b) => a.faculty.localeCompare(b.faculty));
+          writeCachedAllocations(next);
+          return next;
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to save faculty budget allocation";
+        setError(message);
+        throw new Error(message);
+      }
     },
     getAllocationForFaculty(faculty) {
       if (!faculty) return null;

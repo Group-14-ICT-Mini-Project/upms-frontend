@@ -10,6 +10,7 @@ import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonBudgetBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonTable } from "../components/SkeletonLoader";
 import { useProcurements } from "../ProcurementContext";
 import { useBudgets } from "../BudgetContext";
+import { getAuthToken } from "../../api/client";
 
 
 interface FinanceDashboardProps {
@@ -330,6 +331,16 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
   const [amount, setAmount] = useState(String(selectedAllocation?.allocation ?? ""));
   const [budgetCode, setBudgetCode] = useState(selectedAllocation?.budgetCode ?? "");
   const [message, setMessage] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const hasAuthToken = Boolean(getAuthToken());
+  const canSaveAllocation = Boolean(
+    hasAuthToken &&
+    !isSaving &&
+    faculty &&
+    budgetCode.trim() &&
+    Number(amount) > 0
+  );
 
   const totalAllocated = allocations.reduce((sum, item) => sum + item.allocation, 0);
   const totalSpent = allocations.reduce((sum, item) => sum + getBudgetUsageForFaculty(item.faculty, procurements).spent, 0);
@@ -341,19 +352,33 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
     setAmount(String(nextAllocation?.allocation ?? ""));
     setBudgetCode(nextAllocation?.budgetCode ?? "");
     setMessage("");
+    setSaveError("");
   };
 
   const handleSave = async () => {
     const allocation = Number(amount);
+    if (!hasAuthToken) {
+      setSaveError("Sign in with a Finance Division account to save faculty budget allocations.");
+      return;
+    }
     if (!faculty || !budgetCode.trim() || !Number.isFinite(allocation) || allocation <= 0) return;
-    await allocateFacultyBudget({
-      faculty,
-      allocation,
-      budgetCode: budgetCode.trim(),
-      fiscalYear: new Date().getFullYear(),
-      updatedBy: user.name,
-    });
-    setMessage(`${faculty} procurement budget updated to ${formatLKR(allocation)}.`);
+    setIsSaving(true);
+    setMessage("");
+    setSaveError("");
+    try {
+      await allocateFacultyBudget({
+        faculty,
+        allocation,
+        budgetCode: budgetCode.trim(),
+        fiscalYear: new Date().getFullYear(),
+        updatedBy: user.name,
+      });
+      setMessage(`${faculty} procurement budget updated to ${formatLKR(allocation)}.`);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save faculty budget allocation");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -373,7 +398,17 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
       )}
       {error && (
         <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 650, marginBottom: 18 }}>
-          {error}
+          Faculty budget records are unavailable right now. Please try again after confirming the procurement service is running.
+        </div>
+      )}
+      {!hasAuthToken && (
+        <div role="alert" style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 650, marginBottom: 18 }}>
+          Sign in with a Finance Division account to save faculty budget allocations.
+        </div>
+      )}
+      {saveError && saveError !== error && (
+        <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 650, marginBottom: 18 }}>
+          The allocation could not be saved. Please check the details and try again.
         </div>
       )}
 
@@ -397,19 +432,19 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
             </div>
             <button
               onClick={handleSave}
-              disabled={!faculty || !budgetCode.trim() || Number(amount) <= 0}
+              disabled={!canSaveAllocation}
               style={{
                 padding: "10px 14px",
                 borderRadius: 9,
                 border: "none",
-                background: !faculty || !budgetCode.trim() || Number(amount) <= 0 ? "#D1D5DB" : "#7A530C",
+                background: !canSaveAllocation ? "#D1D5DB" : "#7A530C",
                 color: "#FFFFFF",
                 fontSize: 13,
                 fontWeight: 800,
-                cursor: !faculty || !budgetCode.trim() || Number(amount) <= 0 ? "not-allowed" : "pointer",
+                cursor: !canSaveAllocation ? "not-allowed" : "pointer",
               }}
             >
-              Save Allocation
+              {isSaving ? "Saving..." : "Save Allocation"}
             </button>
           </div>
         </div>

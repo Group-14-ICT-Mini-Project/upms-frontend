@@ -64,6 +64,12 @@ function sameText(left?: string, right?: string) {
   return (left ?? "").trim().toLowerCase() === (right ?? "").trim().toLowerCase();
 }
 
+function isBudgetCommittedStatus(status: Procurement["status"]) {
+  return status !== "Pending Fund Verification" &&
+    status !== "Rejected" &&
+    status !== "Completed";
+}
+
 export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const [allocations, setAllocations] = useState<FacultyBudgetAllocation[]>(readCachedAllocations);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,21 +100,28 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     error,
     refresh,
     async allocateFacultyBudget(payload) {
-      const saved = await budgetApi.saveFacultyBudgetAllocation({
-        faculty: payload.faculty,
-        allocation: payload.allocation,
-        budgetCode: payload.budgetCode,
-        fiscalYear: payload.fiscalYear,
-        updatedBy: payload.updatedBy,
-      });
-      const nextAllocation = mapAllocation(saved);
-      setAllocations(current => {
-        const next = current.some(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear)
-          ? current.map(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear ? nextAllocation : item)
-          : [...current, nextAllocation].sort((a, b) => a.faculty.localeCompare(b.faculty));
-        writeCachedAllocations(next);
-        return next;
-      });
+      setError(null);
+      try {
+        const saved = await budgetApi.saveFacultyBudgetAllocation({
+          faculty: payload.faculty,
+          allocation: payload.allocation,
+          budgetCode: payload.budgetCode,
+          fiscalYear: payload.fiscalYear,
+          updatedBy: payload.updatedBy,
+        });
+        const nextAllocation = mapAllocation(saved);
+        setAllocations(current => {
+          const next = current.some(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear)
+            ? current.map(item => sameText(item.faculty, nextAllocation.faculty) && item.fiscalYear === nextAllocation.fiscalYear ? nextAllocation : item)
+            : [...current, nextAllocation].sort((a, b) => a.faculty.localeCompare(b.faculty));
+          writeCachedAllocations(next);
+          return next;
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to save faculty budget allocation";
+        setError(message);
+        throw new Error(message);
+      }
     },
     getAllocationForFaculty(faculty) {
       if (!faculty) return null;
@@ -121,7 +134,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         .filter(item => item.status === "Completed")
         .reduce((sum, item) => sum + item.value, 0);
       const committed = facultyProcurements
-        .filter(item => item.status !== "Rejected" && item.status !== "Completed")
+        .filter(item => isBudgetCommittedStatus(item.status))
         .reduce((sum, item) => sum + item.value, 0);
       const allocated = allocation?.allocation ?? 0;
 

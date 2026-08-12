@@ -7,9 +7,10 @@ interface ActionQueueListProps {
   items: Procurement[];
   onViewAll?: () => void;
   onItemClick?: (pr: Procurement) => void;
+  subtitleField?: "faculty" | "department";
 }
 
-export function ActionQueueList({ items, onViewAll, onItemClick }: ActionQueueListProps) {
+export function ActionQueueList({ items, onViewAll, onItemClick, subtitleField = "faculty" }: ActionQueueListProps) {
   return (
     <section style={{ marginBottom: 28 }}>
       {/* Header row */}
@@ -75,7 +76,10 @@ export function ActionQueueList({ items, onViewAll, onItemClick }: ActionQueueLi
             overflow: "hidden",
           }}
         >
-          {items.map((pr, idx) => (
+          {items.map((pr, idx) => {
+            const subtitleValue = subtitleField === "department" ? (pr.department || pr.faculty) : pr.faculty;
+
+            return (
             <div
               key={pr.id}
               onClick={() => onItemClick?.(pr)}
@@ -112,7 +116,7 @@ export function ActionQueueList({ items, onViewAll, onItemClick }: ActionQueueLi
                 <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
                   <span style={{ color: "#2563EB", fontWeight: 600 }}>{pr.id}</span>
                   {" · "}
-                  {pr.faculty}
+                  {subtitleValue}
                 </div>
               </div>
 
@@ -130,7 +134,8 @@ export function ActionQueueList({ items, onViewAll, onItemClick }: ActionQueueLi
                 <StatusBadge status={pr.status} />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

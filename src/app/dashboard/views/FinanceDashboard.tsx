@@ -10,7 +10,31 @@ import { useDashboardData } from "../hooks/useDashboardData";
 import { SkeletonWelcomeBanner, SkeletonBudgetBanner, SkeletonStatCardRow, SkeletonActionQueue, SkeletonTable } from "../components/SkeletonLoader";
 import { useProcurements } from "../ProcurementContext";
 import { useBudgets } from "../BudgetContext";
+import { getAuthToken } from "../../api/client";
 
+const UNIVERSITY_FACULTIES = [
+  { value: "FACULTY_OF_TECHNOLOGY", label: "Faculty of Technology" },
+  { value: "FACULTY_OF_MANAGEMENT_STUDIES_AND_COMMERCE", label: "Faculty of Management Studies and Commerce" },
+  { value: "FACULTY_OF_APPLIED_SCIENCES", label: "Faculty of Applied Sciences" },
+  { value: "FACULTY_OF_MEDICAL_SCIENCES", label: "Faculty of Medical Sciences" },
+  { value: "FACULTY_OF_ENGINEERING", label: "Faculty of Engineering" },
+  { value: "FACULTY_OF_ALLIED_HEALTH_SCIENCES", label: "Faculty of Allied Health Sciences" },
+  { value: "FACULTY_OF_DENTAL_SCIENCES", label: "Faculty of Dental Sciences" },
+  { value: "FACULTY_OF_URBAN_AQUATIC_AND_BIORESOURCES", label: "Faculty of Urban Aquatic and Bioresources" },
+  { value: "FACULTY_OF_COMPUTING", label: "Faculty of Computing" },
+  { value: "FACULTY_OF_HUMANITIES_AND_SOCIAL_SCIENCES", label: "Faculty of Humanities and Social Sciences" },
+];
+
+function formatFacultyName(value: string) {
+  const known = UNIVERSITY_FACULTIES.find(item => item.value === value || item.label === value);
+  if (known) return known.label;
+  if (!value.includes("_")) return value;
+  return value
+    .toLowerCase()
+    .split("_")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
 interface FinanceDashboardProps {
   user: UserContext;
@@ -322,14 +346,25 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
   const { procurements } = useProcurements();
   const { allocations, allocateFacultyBudget, getBudgetUsageForFaculty, error } = useBudgets();
   const faculties = Array.from(new Set([
+    ...UNIVERSITY_FACULTIES.map(item => item.value),
     ...allocations.map(item => item.faculty),
     ...procurements.map(item => item.faculty),
-  ].filter(Boolean))).sort();
-  const [faculty, setFaculty] = useState(faculties[0] ?? "Faculty of Applied Sciences");
+  ].filter(Boolean))).sort((a, b) => formatFacultyName(a).localeCompare(formatFacultyName(b)));
+  const [faculty, setFaculty] = useState(faculties[0] ?? UNIVERSITY_FACULTIES[0].value);
   const selectedAllocation = allocations.find(item => item.faculty === faculty);
   const [amount, setAmount] = useState(String(selectedAllocation?.allocation ?? ""));
   const [budgetCode, setBudgetCode] = useState(selectedAllocation?.budgetCode ?? "");
   const [message, setMessage] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const hasAuthToken = Boolean(getAuthToken());
+  const canSaveAllocation = Boolean(
+    hasAuthToken &&
+    !isSaving &&
+    faculty &&
+    budgetCode.trim() &&
+    Number(amount) > 0
+  );
 
   const totalAllocated = allocations.reduce((sum, item) => sum + item.allocation, 0);
   const totalSpent = allocations.reduce((sum, item) => sum + getBudgetUsageForFaculty(item.faculty, procurements).spent, 0);
@@ -341,19 +376,33 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
     setAmount(String(nextAllocation?.allocation ?? ""));
     setBudgetCode(nextAllocation?.budgetCode ?? "");
     setMessage("");
+    setSaveError("");
   };
 
   const handleSave = async () => {
     const allocation = Number(amount);
+    if (!hasAuthToken) {
+      setSaveError("Sign in with a Finance Division account to save faculty budget allocations.");
+      return;
+    }
     if (!faculty || !budgetCode.trim() || !Number.isFinite(allocation) || allocation <= 0) return;
-    await allocateFacultyBudget({
-      faculty,
-      allocation,
-      budgetCode: budgetCode.trim(),
-      fiscalYear: new Date().getFullYear(),
-      updatedBy: user.name,
-    });
-    setMessage(`${faculty} procurement budget updated to ${formatLKR(allocation)}.`);
+    setIsSaving(true);
+    setMessage("");
+    setSaveError("");
+    try {
+      await allocateFacultyBudget({
+        faculty,
+        allocation,
+        budgetCode: budgetCode.trim(),
+        fiscalYear: new Date().getFullYear(),
+        updatedBy: user.name,
+      });
+      setMessage(`${formatFacultyName(faculty)} procurement budget updated to ${formatLKR(allocation)}.`);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save faculty budget allocation");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -373,7 +422,17 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
       )}
       {error && (
         <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 650, marginBottom: 18 }}>
-          {error}
+          Faculty budget records are unavailable right now. Please try again after confirming the procurement service is running.
+        </div>
+      )}
+      {!hasAuthToken && (
+        <div role="alert" style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 650, marginBottom: 18 }}>
+          Sign in with a Finance Division account to save faculty budget allocations.
+        </div>
+      )}
+      {saveError && saveError !== error && (
+        <div role="alert" style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C", borderRadius: 10, padding: "12px 14px", fontSize: 13, fontWeight: 650, marginBottom: 18 }}>
+          The allocation could not be saved. Please check the details and try again.
         </div>
       )}
 
@@ -384,7 +443,7 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
             <div>
               <label style={labelStyle}>Faculty</label>
               <select value={faculty} onChange={event => handleFacultyChange(event.target.value)} style={inputStyle}>
-                {faculties.map(item => <option key={item} value={item}>{item}</option>)}
+                {faculties.map(item => <option key={item} value={item}>{formatFacultyName(item)}</option>)}
               </select>
             </div>
             <div>
@@ -397,19 +456,19 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
             </div>
             <button
               onClick={handleSave}
-              disabled={!faculty || !budgetCode.trim() || Number(amount) <= 0}
+              disabled={!canSaveAllocation}
               style={{
                 padding: "10px 14px",
                 borderRadius: 9,
                 border: "none",
-                background: !faculty || !budgetCode.trim() || Number(amount) <= 0 ? "#D1D5DB" : "#7A530C",
+                background: !canSaveAllocation ? "#D1D5DB" : "#7A530C",
                 color: "#FFFFFF",
                 fontSize: 13,
                 fontWeight: 800,
-                cursor: !faculty || !budgetCode.trim() || Number(amount) <= 0 ? "not-allowed" : "pointer",
+                cursor: !canSaveAllocation ? "not-allowed" : "pointer",
               }}
             >
-              Save Allocation
+              {isSaving ? "Saving..." : "Save Allocation"}
             </button>
           </div>
         </div>
@@ -445,7 +504,7 @@ function BudgetAllocationPanel({ user }: { user: UserContext }) {
                 }}
               >
                 <span>
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 750, color: "#111827" }}>{item.faculty}</span>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 750, color: "#111827" }}>{formatFacultyName(item.faculty)}</span>
                   <span style={{ display: "block", fontSize: 11, color: "#6B7280", marginTop: 2 }}>{item.budgetCode}</span>
                 </span>
                 <span style={tableAmountStyle}>{formatLKR(usage.allocated)}</span>

@@ -322,6 +322,8 @@ export interface Procurement {
 export interface UserContext {
   role: Role;
   name: string;
+  firstName?: string;
+  lastName?: string;
   title: string;       // e.g. "Head of Department"
   faculty?: string;
   department?: string;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Role, UserContext } from "../dashboard/types";
 import { ROLE_META } from "../dashboard/types";
 import * as authApi from "../api/auth";
@@ -7,6 +7,7 @@ import {
   setRefreshToken,
   clearAuthData,
   getAuthToken,
+  getRefreshToken,
   getStoredUser,
   setStoredUser,
 } from "../api/client";
@@ -36,14 +37,26 @@ function buildUserContext(res: authApi.AuthResponse): UserContext {
   const primaryBackendRole = res.roles[0] ?? "HOD";
   const role = mapBackendRole(primaryBackendRole);
   const meta = ROLE_META[role];
+  const fullName = [res.firstName, res.lastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const displayName = fullName || res.username;
 
   return {
     role,
-    name: res.username,
+    name: displayName,
+    firstName: res.firstName,
+    lastName: res.lastName,
     title: meta.label,
     faculty: res.faculty,
     department: res.department,
-    avatarInitials: res.username.slice(0, 2).toUpperCase(),
+    avatarInitials: displayName
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase(),
   };
 }
 
@@ -70,6 +83,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return getStoredUser<UserContext>();
   });
   const [isLoading] = useState(false);
+
+  useEffect(() => {
+    if (!getAuthToken() || user?.lastName) {
+      return;
+    }
+
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      return;
+    }
+
+    let isCurrent = true;
+
+    authApi.refreshToken({ refreshToken })
+      .then((response) => {
+        if (!isCurrent) return;
+        setAuthToken(response.accessToken);
+        setRefreshToken(response.refreshToken);
+        const userCtx = buildUserContext(response);
+        setStoredUser(userCtx);
+        setUser(userCtx);
+      })
+      .catch(() => {
+        // Keep the current session when refresh fails; normal API calls will handle expiry.
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user?.lastName]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,

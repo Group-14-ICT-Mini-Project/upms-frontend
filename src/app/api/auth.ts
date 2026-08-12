@@ -10,6 +10,10 @@ export interface MicrosoftLoginRequest {
   accessToken: string;
 }
 
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
 export interface RegisterRequest {
   username: string;
   firstName: string;
@@ -56,6 +60,13 @@ export function login(payload: LoginRequest) {
 
 export function microsoftLogin(payload: MicrosoftLoginRequest) {
   return apiRequest<AuthResponse>("/v1/auth/microsoft", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function refreshToken(payload: RefreshTokenRequest) {
+  return apiRequest<AuthResponse>("/v1/auth/refresh-token", {
     method: "POST",
     body: JSON.stringify(payload),
   });
